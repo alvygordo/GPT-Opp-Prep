@@ -1,65 +1,244 @@
-import Image from "next/image";
+'use client'
+
+import { useState, useRef } from 'react'
+import { supabase } from '@/lib/supabase'
+
+const MAX_FILES = 10
+const ACCEPTED_TYPES = ['application/pdf', 'image/png', 'image/jpeg', 'image/webp']
 
 export default function Home() {
+  const [customerName, setCustomerName] = useState('')
+  const [notes, setNotes] = useState('')
+  const [files, setFiles] = useState<File[]>([])
+  const [loading, setLoading] = useState(false)
+  const [report, setReport] = useState('')
+  const [error, setError] = useState('')
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const selected = Array.from(e.target.files || [])
+    const valid = selected.filter(f => ACCEPTED_TYPES.includes(f.type))
+    const combined = [...files, ...valid].slice(0, MAX_FILES)
+    setFiles(combined)
+    if (fileInputRef.current) fileInputRef.current.value = ''
+  }
+
+  function removeFile(index: number) {
+    setFiles(files.filter((_, i) => i !== index))
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    setLoading(true)
+    setError('')
+    setReport('')
+
+    try {
+      // Save opportunity to Supabase
+      const { data: opp, error: oppError } = await supabase
+        .from('opportunities')
+        .insert({ customer_name: customerName, status: 'In Progress' })
+        .select()
+        .single()
+
+      if (oppError) throw oppError
+
+      // Convert files to base64
+      const fileContents: { name: string; type: string; data: string }[] = []
+      for (const file of files) {
+        const buffer = await file.arrayBuffer()
+        const bytes = new Uint8Array(buffer)
+        let binary = ''
+        for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i])
+        const base64 = btoa(binary)
+        fileContents.push({ name: file.name, type: file.type, data: base64 })
+
+        // Upload to Supabase Storage
+        await supabase.storage
+          .from('documents')
+          .upload(`${opp.id}/${file.name}`, file)
+      }
+
+      // Call Claude API
+      const response = await fetch('/api/analyze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          customerName,
+          notes,
+          files: fileContents
+        })
+      })
+
+      const data = await response.json()
+      if (!response.ok) throw new Error(data.error)
+
+      // Save report to Supabase
+      await supabase
+        .from('reports')
+        .insert({ opportunity_id: opp.id, report_output: data.result })
+
+      setReport(data.result)
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Something went wrong')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  function copyToClipboard() {
+    navigator.clipboard.writeText(report)
+    alert('Report copied — paste directly into Google Sheets')
+  }
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+    <div className="min-h-screen" style={{ backgroundColor: '#f5f7f7' }}>
+
+      {/* Header */}
+      <div style={{ backgroundColor: '#1a1a2e' }} className="py-8 px-6">
+        <div className="max-w-4xl mx-auto">
+          <h1 className="text-4xl font-bold text-white tracking-tight">Opp Prep AI</h1>
+          <p style={{ color: '#00b4a2' }} className="mt-2 text-base font-medium">
+            Opportunity Preparation Assistant — Sales Ops Core Renewals
           </p>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+      </div>
+
+      {/* Description bar */}
+      <div style={{ backgroundColor: '#00b4a2' }} className="px-6 py-4">
+        <div className="max-w-4xl mx-auto">
+          <p className="text-white text-sm leading-relaxed">
+            Opp Prep AI helps you generate a complete Opportunity Preparation report. Upload the required documents: Signed Quote, Salesforce Printable View, NetSuite Subscription Page, and NetSuite Customer Dashboard, then run the analysis.
+          </p>
         </div>
-      </main>
+      </div>
+
+      {/* Main content */}
+      <div className="max-w-4xl mx-auto px-6 py-8 space-y-6">
+
+        <form onSubmit={handleSubmit} className="space-y-6">
+
+          {/* Customer name */}
+          <div className="bg-white rounded-xl shadow-sm p-6">
+            <label className="block text-sm font-semibold mb-2" style={{ color: '#1a1a2e' }}>
+              Customer Name
+            </label>
+            <input
+              type="text"
+              value={customerName}
+              onChange={e => setCustomerName(e.target.value)}
+              required
+              placeholder="Enter customer legal name"
+              className="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2"
+              style={{ '--tw-ring-color': '#00b4a2' } as React.CSSProperties}
+            />
+          </div>
+
+          {/* File upload */}
+          <div className="bg-white rounded-xl shadow-sm p-6">
+            <label className="block text-sm font-semibold mb-1" style={{ color: '#1a1a2e' }}>
+              Upload Documents
+            </label>
+            <p className="text-xs text-gray-400 mb-4">
+              PDF, PNG, JPG — up to {MAX_FILES} files. Recommended: Signed Quote, SF Printable View, NS Subscription Page, NS Customer Dashboard.
+            </p>
+
+            {/* Drop zone */}
+            <div
+              onClick={() => fileInputRef.current?.click()}
+              className="border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-colors"
+              style={{ borderColor: '#00b4a2', backgroundColor: '#f0fafa' }}
+            >
+              <div className="text-3xl mb-2">📎</div>
+              <p className="text-sm font-medium" style={{ color: '#00b4a2' }}>
+                Click to upload files
+              </p>
+              <p className="text-xs text-gray-400 mt-1">{files.length}/{MAX_FILES} files added</p>
+            </div>
+
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              accept=".pdf,.png,.jpg,.jpeg,.webp"
+              onChange={handleFileChange}
+              className="hidden"
+            />
+
+            {/* File list */}
+            {files.length > 0 && (
+              <ul className="mt-4 space-y-2">
+                {files.map((file, i) => (
+                  <li key={i} className="flex items-center justify-between bg-gray-50 rounded-lg px-4 py-2 text-sm">
+                    <span className="truncate text-gray-700 max-w-xs">{file.name}</span>
+                    <button
+                      type="button"
+                      onClick={() => removeFile(i)}
+                      className="text-gray-400 hover:text-red-500 ml-4 font-bold text-base"
+                    >
+                      ×
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+
+          {/* Additional notes */}
+          <div className="bg-white rounded-xl shadow-sm p-6">
+            <label className="block text-sm font-semibold mb-1" style={{ color: '#1a1a2e' }}>
+              Additional Notes (optional)
+            </label>
+            <p className="text-xs text-gray-400 mb-3">
+              Paste any extra SF fields, NS data, or contract details not visible in the uploaded files.
+            </p>
+            <textarea
+              value={notes}
+              onChange={e => setNotes(e.target.value)}
+              rows={5}
+              placeholder="Paste additional data here..."
+              className="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2"
+            />
+          </div>
+
+          {/* Submit */}
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full text-white font-semibold py-3.5 rounded-xl transition-opacity disabled:opacity-50 text-base"
+            style={{ backgroundColor: loading ? '#00b4a2' : '#1a1a2e' }}
+          >
+            {loading ? 'Analyzing — this may take a moment...' : 'Run Opp Prep Analysis'}
+          </button>
+        </form>
+
+        {/* Error */}
+        {error && (
+          <div className="bg-red-50 border border-red-200 text-red-700 rounded-xl p-4 text-sm">
+            {error}
+          </div>
+        )}
+
+        {/* Report output */}
+        {report && (
+          <div className="bg-white rounded-xl shadow-sm p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-lg font-bold" style={{ color: '#1a1a2e' }}>Report</h2>
+              <button
+                onClick={copyToClipboard}
+                className="text-sm text-white px-5 py-2 rounded-lg font-medium transition-opacity hover:opacity-90"
+                style={{ backgroundColor: '#00b4a2' }}
+              >
+                Copy for Google Sheets
+              </button>
+            </div>
+            <pre className="whitespace-pre-wrap text-sm text-gray-700 font-mono leading-relaxed overflow-x-auto">
+              {report}
+            </pre>
+          </div>
+        )}
+
+      </div>
     </div>
-  );
+  )
 }
