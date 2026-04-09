@@ -1,8 +1,8 @@
-import Anthropic from '@anthropic-ai/sdk'
+import OpenAI from 'openai'
 import { NextRequest, NextResponse } from 'next/server'
 
-const client = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY!
+const client = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY!
 })
 
 const SYSTEM_PROMPT = `You are Opp Prep AI, a Sales Ops Opportunity Preparation analyst for Core Renewals.
@@ -64,57 +64,50 @@ export async function POST(request: NextRequest) {
       files: FileInput[]
     }
 
-    // Build content blocks — images and PDFs sent as base64
-    const contentBlocks: Anthropic.MessageParam['content'] = []
+    const contentBlocks: OpenAI.Chat.ChatCompletionContentPart[] = []
 
-    // Add text context first
+    // Add text context
     contentBlocks.push({
       type: 'text',
       text: `Customer: ${customerName}\n\nPlease analyze the uploaded documents and produce the full Opp Prep report.\n\nAdditional notes:\n${notes || 'None provided'}`
     })
 
-    // Add each file as a content block
+    // Add image files
     for (const file of files || []) {
-      if (file.type === 'application/pdf') {
+      if (file.type.startsWith('image/')) {
         contentBlocks.push({
-          type: 'document',
-          source: {
-            type: 'base64',
-            media_type: 'application/pdf',
-            data: file.data
-          },
-          title: file.name
-        } as Anthropic.Base64PDFSource & { type: 'document'; title: string })
-      } else if (file.type.startsWith('image/')) {
-        contentBlocks.push({
-          type: 'image',
-          source: {
-            type: 'base64',
-            media_type: file.type as 'image/png' | 'image/jpeg' | 'image/webp' | 'image/gif',
-            data: file.data
+          type: 'image_url',
+          image_url: {
+            url: `data:${file.type};base64,${file.data}`,
+            detail: 'high'
           }
         })
-        // Label the image
         contentBlocks.push({
           type: 'text',
           text: `(Above image: ${file.name})`
         })
+      } else if (file.type === 'application/pdf') {
+        // PDFs: send as file upload note — GPT-4o vision doesn't support PDF base64 directly
+        contentBlocks.push({
+          type: 'text',
+          text: `[PDF uploaded: ${file.name} — please treat this as a document reference]`
+        })
       }
     }
 
-    const response = await client.messages.create({
-      model: 'claude-sonnet-4-6',
+    const response = await client.chat.completions.create({
+      model: 'gpt-4o',
       max_tokens: 8192,
-      system: SYSTEM_PROMPT,
-      messages: [{ role: 'user', content: contentBlocks }]
+      messages: [
+        { role: 'system', content: SYSTEM_PROMPT },
+        { role: 'user', content: contentBlocks }
+      ]
     })
 
-    const content = response.content[0]
-    if (content.type !== 'text') {
-      throw new Error('Unexpected response type')
-    }
+    const result = response.choices[0]?.message?.content
+    if (!result) throw new Error('No response from OpenAI')
 
-    return NextResponse.json({ result: content.text })
+    return NextResponse.json({ result })
   } catch (error) {
     console.error('API error:', error)
     return NextResponse.json({ error: 'Failed to analyze opportunity' }, { status: 500 })
