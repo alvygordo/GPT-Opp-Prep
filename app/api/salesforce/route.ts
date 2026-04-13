@@ -7,8 +7,7 @@ export async function POST(request: NextRequest) {
     const { opportunityName } = await request.json()
 
     const conn = new jsforce.Connection({
-      instanceUrl: process.env.SALESFORCE_INSTANCE_URL,
-      loginUrl: process.env.SALESFORCE_INSTANCE_URL
+      loginUrl: 'https://login.salesforce.com'
     })
 
     await conn.login(
@@ -20,10 +19,9 @@ export async function POST(request: NextRequest) {
     const result = await conn.query(`
       SELECT
         Id, Name, StageName, CloseDate, Amount,
-        AccountId, Account.Name, Account.BillingAddress,
+        AccountId, Account.Name,
         Owner.Name, OwnerId,
         Type, LeadSource, Description,
-        Probability, ForecastCategory,
         CreatedDate, LastModifiedDate
       FROM Opportunity
       WHERE Name LIKE '%${opportunityName.replace(/'/g, "\\'")}%'
