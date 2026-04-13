@@ -6,6 +6,16 @@ import { supabase } from '@/lib/supabase'
 const MAX_FILES = 10
 const ACCEPTED_TYPES = ['application/pdf', 'image/png', 'image/jpeg', 'image/webp']
 
+type SfOpportunity = {
+  Id: string
+  Name: string
+  StageName: string
+  CloseDate: string
+  Amount: number
+  'Account.Name': string
+  'Owner.Name': string
+}
+
 export default function Home() {
   const [customerName, setCustomerName] = useState('')
   const [notes, setNotes] = useState('')
@@ -14,6 +24,13 @@ export default function Home() {
   const [report, setReport] = useState('')
   const [error, setError] = useState('')
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  // Salesforce search state
+  const [sfSearch, setSfSearch] = useState('')
+  const [sfSearching, setSfSearching] = useState(false)
+  const [sfResults, setSfResults] = useState<SfOpportunity[]>([])
+  const [sfSelected, setSfSelected] = useState<SfOpportunity | null>(null)
+  const [sfError, setSfError] = useState('')
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const selected = Array.from(e.target.files || [])
@@ -27,6 +44,46 @@ export default function Home() {
     setFiles(files.filter((_, i) => i !== index))
   }
 
+  async function searchSalesforce() {
+    if (!sfSearch.trim()) return
+    setSfSearching(true)
+    setSfError('')
+    setSfResults([])
+    setSfSelected(null)
+
+    try {
+      const response = await fetch('/api/salesforce', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ opportunityName: sfSearch })
+      })
+      const data = await response.json()
+      if (!response.ok) throw new Error(data.error)
+      setSfResults(data.opportunities || [])
+      if (data.opportunities?.length === 0) setSfError('No opportunities found.')
+    } catch (err: unknown) {
+      setSfError(err instanceof Error ? err.message : 'Failed to search Salesforce')
+    } finally {
+      setSfSearching(false)
+    }
+  }
+
+  function selectOpportunity(opp: SfOpportunity) {
+    setSfSelected(opp)
+    setSfResults([])
+    setCustomerName(opp['Account.Name'] || opp.Name)
+    // Add SF data to notes
+    setNotes(`--- Salesforce Opportunity Data ---
+Opportunity Name: ${opp.Name}
+Account: ${opp['Account.Name']}
+Stage: ${opp.StageName}
+Close Date: ${opp.CloseDate}
+Amount: ${opp.Amount ? '$' + opp.Amount.toLocaleString() : 'Not set'}
+Owner: ${opp['Owner.Name']}
+Opportunity ID: ${opp.Id}
+---`)
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setLoading(true)
@@ -34,7 +91,6 @@ export default function Home() {
     setReport('')
 
     try {
-      // Save opportunity to Supabase
       const { data: opp, error: oppError } = await supabase
         .from('opportunities')
         .insert({ customer_name: customerName, status: 'In Progress' })
@@ -43,7 +99,6 @@ export default function Home() {
 
       if (oppError) throw oppError
 
-      // Convert files to base64
       const fileContents: { name: string; type: string; data: string }[] = []
       for (const file of files) {
         const buffer = await file.arrayBuffer()
@@ -53,27 +108,20 @@ export default function Home() {
         const base64 = btoa(binary)
         fileContents.push({ name: file.name, type: file.type, data: base64 })
 
-        // Upload to Supabase Storage
         await supabase.storage
           .from('documents')
           .upload(`${opp.id}/${file.name}`, file)
       }
 
-      // Call Claude API
       const response = await fetch('/api/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          customerName,
-          notes,
-          files: fileContents
-        })
+        body: JSON.stringify({ customerName, notes, files: fileContents })
       })
 
       const data = await response.json()
       if (!response.ok) throw new Error(data.error)
 
-      // Save report to Supabase
       await supabase
         .from('reports')
         .insert({ opportunity_id: opp.id, report_output: data.result })
@@ -118,6 +166,77 @@ export default function Home() {
 
         <form onSubmit={handleSubmit} className="space-y-6">
 
+          {/* Salesforce Search */}
+          <div className="bg-white rounded-xl shadow-sm p-6">
+            <label className="block text-sm font-semibold mb-1" style={{ color: '#1a1a2e' }}>
+              Search Salesforce Opportunity
+            </label>
+            <p className="text-xs text-gray-400 mb-3">
+              Search by opportunity name to pull data directly from Salesforce.
+            </p>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={sfSearch}
+                onChange={e => setSfSearch(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), searchSalesforce())}
+                placeholder="Type opportunity name..."
+                className="flex-1 border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2"
+              />
+              <button
+                type="button"
+                onClick={searchSalesforce}
+                disabled={sfSearching}
+                className="text-white px-5 py-2.5 rounded-lg text-sm font-medium disabled:opacity-50"
+                style={{ backgroundColor: '#00b4a2' }}
+              >
+                {sfSearching ? 'Searching...' : 'Search SF'}
+              </button>
+            </div>
+
+            {/* SF Error */}
+            {sfError && (
+              <p className="text-red-500 text-xs mt-2">{sfError}</p>
+            )}
+
+            {/* SF Results */}
+            {sfResults.length > 0 && (
+              <ul className="mt-3 border border-gray-100 rounded-lg divide-y divide-gray-100">
+                {sfResults.map(opp => (
+                  <li
+                    key={opp.Id}
+                    onClick={() => selectOpportunity(opp)}
+                    className="px-4 py-3 cursor-pointer hover:bg-gray-50 transition-colors"
+                  >
+                    <p className="text-sm font-medium text-gray-800">{opp.Name}</p>
+                    <p className="text-xs text-gray-400 mt-0.5">
+                      {opp['Account.Name']} · {opp.StageName} · {opp.CloseDate}
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            )}
+
+            {/* SF Selected */}
+            {sfSelected && (
+              <div className="mt-3 rounded-lg px-4 py-3 text-sm" style={{ backgroundColor: '#e0f7f5' }}>
+                <p className="font-medium" style={{ color: '#1a1a2e' }}>
+                  ✓ {sfSelected.Name}
+                </p>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  SF data loaded — {sfSelected.StageName} · Close: {sfSelected.CloseDate}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => { setSfSelected(null); setSfSearch('') }}
+                  className="text-xs mt-1 underline text-gray-400"
+                >
+                  Clear
+                </button>
+              </div>
+            )}
+          </div>
+
           {/* Customer name */}
           <div className="bg-white rounded-xl shadow-sm p-6">
             <label className="block text-sm font-semibold mb-2" style={{ color: '#1a1a2e' }}>
@@ -130,7 +249,6 @@ export default function Home() {
               required
               placeholder="Enter customer legal name"
               className="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2"
-              style={{ '--tw-ring-color': '#00b4a2' } as React.CSSProperties}
             />
           </div>
 
@@ -143,7 +261,6 @@ export default function Home() {
               PDF, PNG, JPG — up to {MAX_FILES} files. Recommended: Signed Quote, SF Printable View, NS Subscription Page, NS Customer Dashboard.
             </p>
 
-            {/* Drop zone */}
             <div
               onClick={() => fileInputRef.current?.click()}
               className="border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-colors"
@@ -165,7 +282,6 @@ export default function Home() {
               className="hidden"
             />
 
-            {/* File list */}
             {files.length > 0 && (
               <ul className="mt-4 space-y-2">
                 {files.map((file, i) => (
