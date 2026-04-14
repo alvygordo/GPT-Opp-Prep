@@ -10,7 +10,7 @@ export async function GET() {
     response_type: 'code',
     client_id: process.env.SF_CONSUMER_KEY!,
     redirect_uri: process.env.SF_CALLBACK_URL!,
-    scope: 'api id email profile openid',
+    scope: 'api id openid',
     code_challenge: codeChallenge,
     code_challenge_method: 'S256'
   })
