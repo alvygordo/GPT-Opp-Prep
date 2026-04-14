@@ -29,7 +29,14 @@ export async function POST(request: NextRequest) {
       LIMIT 10
     `)
 
-    return NextResponse.json({ opportunities: result.records })
+    // Flatten nested Account.Name from jsforce response
+    const opportunities = result.records.map((r: any) => ({
+      ...r,
+      'Account.Name': r.Account?.Name || r['Account.Name'] || '',
+      'Owner.Name': r.Owner?.Name || r['Owner.Name'] || ''
+    }))
+
+    return NextResponse.json({ opportunities })
   } catch (error) {
     console.error('Salesforce error:', error)
     return NextResponse.json(
