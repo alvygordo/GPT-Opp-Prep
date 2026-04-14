@@ -7,7 +7,7 @@ export async function POST(request: NextRequest) {
     const { opportunityName } = await request.json()
 
     const conn = new jsforce.Connection({
-      loginUrl: 'https://login.salesforce.com'
+      loginUrl: 'https://trilogy-sales.my.salesforce.com'
     })
 
     await conn.login(

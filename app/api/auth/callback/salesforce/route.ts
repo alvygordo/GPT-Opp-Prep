@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const tokenRes = await fetch('https://login.salesforce.com/services/oauth2/token', {
+    const tokenRes = await fetch('https://trilogy-sales.my.salesforce.com/services/oauth2/token', {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: new URLSearchParams({
