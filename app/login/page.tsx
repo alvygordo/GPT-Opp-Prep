@@ -1,13 +1,15 @@
 'use client'
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, Suspense } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 
-export default function LoginPage() {
+function LoginForm() {
   const [email, setEmail] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const oauthError = searchParams.get('error')
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault()
@@ -26,7 +28,6 @@ export default function LoginPage() {
       setError('Access denied. Your email is not on the approved list.')
       setLoading(false)
     } else {
-      // Set cookie for session
       document.cookie = `opp_prep_user=${encodeURIComponent(email.toLowerCase().trim())}; path=/; max-age=86400`
       router.push('/')
     }
@@ -60,9 +61,33 @@ export default function LoginPage() {
             </div>
             <h1 className="text-xl font-bold text-gray-800">Opp Prep AI</h1>
             <p className="text-sm text-gray-500 mt-1 text-center">
-              Enter your Trilogy email to access the app
+              Sign in with your Salesforce account
             </p>
           </div>
+
+          {/* Salesforce SSO button */}
+          <a
+            href="/api/auth/salesforce"
+            className="w-full flex items-center justify-center gap-3 text-white font-semibold py-3 rounded-xl text-sm mb-4"
+            style={{ backgroundColor: '#00A1E0' }}
+          >
+            <svg width="18" height="18" viewBox="0 0 52 38" fill="white" xmlns="http://www.w3.org/2000/svg">
+              <path d="M21.6 3.6C23.8 1.3 26.9 0 30.2 0c4.5 0 8.4 2.5 10.5 6.2.9-.4 1.9-.6 3-.6 4.3 0 7.8 3.5 7.8 7.8 0 .7-.1 1.4-.3 2C53 17 54 19.4 54 22c0 5.5-4.5 10-10 10H12C5.4 32 0 26.6 0 20c0-5.2 3.3-9.6 8-11.2C8 8.5 8 8.2 8 7.9 8 3.5 11.5 0 16 0c2.1 0 4 .8 5.6 2.1z"/>
+            </svg>
+            Login with Salesforce
+          </a>
+
+          <div className="flex items-center gap-3 mb-4">
+            <div className="flex-1 h-px bg-gray-200"></div>
+            <span className="text-xs text-gray-400">or use email</span>
+            <div className="flex-1 h-px bg-gray-200"></div>
+          </div>
+
+          {(error || oauthError) && (
+            <div className="bg-red-50 border border-red-200 text-red-700 rounded-lg p-3 text-sm mb-4">
+              {error || 'Salesforce login failed. Try again or use email below.'}
+            </div>
+          )}
 
           <form onSubmit={handleLogin} className="space-y-4">
             <div>
@@ -77,12 +102,6 @@ export default function LoginPage() {
               />
             </div>
 
-            {error && (
-              <div className="bg-red-50 border border-red-200 text-red-700 rounded-lg p-3 text-sm">
-                {error}
-              </div>
-            )}
-
             <button
               type="submit"
               disabled={loading}
@@ -96,5 +115,13 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense>
+      <LoginForm />
+    </Suspense>
   )
 }
