@@ -7,8 +7,13 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(new URL('/login?error=no_code', request.url))
   }
 
+  const codeVerifier = request.cookies.get('sf_code_verifier')?.value
+
+  if (!codeVerifier) {
+    return NextResponse.redirect(new URL('/login?error=no_verifier', request.url))
+  }
+
   try {
-    // Exchange code for access token
     const tokenRes = await fetch('https://login.salesforce.com/services/oauth2/token', {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -17,7 +22,8 @@ export async function GET(request: NextRequest) {
         code,
         client_id: process.env.SF_CONSUMER_KEY!,
         client_secret: process.env.SF_CONSUMER_SECRET!,
-        redirect_uri: process.env.SF_CALLBACK_URL!
+        redirect_uri: process.env.SF_CALLBACK_URL!,
+        code_verifier: codeVerifier
       })
     })
 
@@ -28,7 +34,6 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(new URL('/login?error=token_failed', request.url))
     }
 
-    // Get user info from Salesforce
     const userRes = await fetch(tokenData.id, {
       headers: { Authorization: `Bearer ${tokenData.access_token}` }
     })
@@ -40,13 +45,13 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(new URL('/login?error=no_email', request.url))
     }
 
-    // Set session cookie and redirect to app
     const response = NextResponse.redirect(new URL('/', request.url))
     response.cookies.set('opp_prep_user', email, {
       path: '/',
       maxAge: 86400,
       httpOnly: false
     })
+    response.cookies.delete('sf_code_verifier')
 
     return response
   } catch (err) {
