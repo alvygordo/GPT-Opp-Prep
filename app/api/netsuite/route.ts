@@ -44,17 +44,16 @@ function buildAuthHeader(method: string, url: string): string {
     .update(baseString)
     .digest('base64')
 
-  const headerParams = {
-    ...params,
-    oauth_signature: signature,
-    realm: ACCOUNT_ID,
-  }
+  // Build Authorization header
+  // realm must NOT be percent-encoded per RFC 2617
+  // all oauth_* values must be percent-encoded per RFC 5849
+  const oauthHeaderParts = [
+    `realm="${ACCOUNT_ID}"`,
+    ...Object.entries(params).map(([k, v]) => `${k}="${encodeURIComponent(v)}"`),
+    `oauth_signature="${encodeURIComponent(signature)}"`,
+  ]
 
-  const headerStr = Object.entries(headerParams)
-    .map(([k, v]) => `${k}="${encodeURIComponent(v)}"`)
-    .join(', ')
-
-  return `OAuth ${headerStr}`
+  return `OAuth ${oauthHeaderParts.join(', ')}`
 }
 
 async function runSuiteQL(query: string) {
@@ -64,7 +63,7 @@ async function runSuiteQL(query: string) {
     headers: {
       Authorization: auth,
       'Content-Type': 'application/json',
-      prefer: 'transient',
+      Prefer: 'transient',
     },
     body: JSON.stringify({ q: query }),
   })
