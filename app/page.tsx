@@ -110,8 +110,7 @@ export default function Home() {
     setNsSearching(true)
     setNsError('')
     setNsData(null)
-    setNsSelectedCustomer(null)
-    setNsSelectedSub(null)
+
 
     try {
       const res = await fetch('/api/netsuite', {

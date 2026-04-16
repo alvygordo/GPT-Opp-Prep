@@ -37,7 +37,7 @@ async function mcpCall(sessionId: string, id: number, toolName: string, args: Re
 
   const text = await res.text()
   // SSE format: "data: {...}"
-  const match = text.match(/data: ({.*})/s)
+  const match = text.match(/data: (\{[\s\S]*\})/)
   if (!match) throw new Error(`No data in MCP response for ${toolName}`)
   const parsed = JSON.parse(match[1])
   if (parsed.error) throw new Error(`MCP error (${toolName}): ${parsed.error.message}`)
