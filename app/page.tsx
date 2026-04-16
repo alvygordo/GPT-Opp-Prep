@@ -16,47 +16,28 @@ type SfOpportunity = {
   'Owner.Name': string
 }
 
-type NsCustomer = {
-  id: string
-  companyname: string
-  entitystatus: string
-  email: string
-  phone: string
-  addr1: string
-  addr2: string
-  city: string
-  state: string
-  zip: string
-  country: string
-}
-
-type NsSubscription = {
-  id: string
-  name: string
-  status: string
-  startdate: string
-  enddate: string
-  annualrevenue: string
-  totalcontractvalue: string
-  autorenewal: string
-  customername: string
-}
-
 type NsInvoice = {
-  id: string
-  trandate: string
-  duedate: string
-  status: string
-  amount: string
-  amountremaining: string
-  tranid: string
+  invoice_id?: string
+  tranid?: string
+  date?: string
+  due_date?: string
+  status?: string
+  amount?: number | string
+  amount_remaining?: number | string
+  [key: string]: unknown
 }
 
 type NsData = {
-  customers: NsCustomer[]
-  subscriptions: NsSubscription[]
-  invoices: NsInvoice[]
-  errors: { customer: string | null; subscription: string | null; invoice: string | null }
+  customer: Record<string, unknown> | null
+  invoices: {
+    status: string
+    total: number
+    latest_invoice: NsInvoice | null
+    invoices: NsInvoice[]
+  } | null
+  overdue: Record<string, unknown> | null
+  customer_id: string | null
+  error?: string
 }
 
 export default function Home() {
@@ -78,8 +59,6 @@ export default function Home() {
   const [nsSearching, setNsSearching] = useState(false)
   const [nsData, setNsData] = useState<NsData | null>(null)
   const [nsError, setNsError] = useState('')
-  const [nsSelectedCustomer, setNsSelectedCustomer] = useState<NsCustomer | null>(null)
-  const [nsSelectedSub, setNsSelectedSub] = useState<NsSubscription | null>(null)
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const selected = Array.from(e.target.files || [])
@@ -141,13 +120,12 @@ export default function Home() {
         body: JSON.stringify({ customerName: query }),
       })
       const data: NsData = await res.json()
-      if (!res.ok) throw new Error((data as unknown as { error: string }).error)
+      if (!res.ok) throw new Error(data.error ?? 'NetSuite lookup failed')
       setNsData(data)
-      if (data.customers.length === 0) setNsError('No matching customers found in NetSuite.')
-
-      // Auto-select if single customer + single subscription
-      if (data.customers.length === 1) {
-        selectNsCustomer(data.customers[0], data)
+      if (!data.invoices && !data.customer) {
+        setNsError('No matching records found in NetSuite.')
+      } else {
+        appendNsNotes(data)
       }
     } catch (err) {
       setNsError(err instanceof Error ? err.message : 'NetSuite lookup failed')
@@ -156,48 +134,23 @@ export default function Home() {
     }
   }
 
-  function selectNsCustomer(customer: NsCustomer, data?: NsData) {
-    const source = data ?? nsData
-    setNsSelectedCustomer(customer)
-    const subs = source?.subscriptions.filter(s => s.customername === customer.companyname) ?? []
-    const activeSub = subs.find(s => s.status?.toLowerCase() === 'active') ?? subs[0] ?? null
-    setNsSelectedSub(activeSub)
-    appendNsNotes(customer, activeSub, source?.invoices ?? [])
-  }
-
-  function appendNsNotes(customer: NsCustomer, sub: NsSubscription | null, invoices: NsInvoice[]) {
-    const addr = [customer.addr1, customer.addr2, customer.city, customer.state, customer.zip, customer.country]
-      .filter(Boolean).join(', ')
-
-    const lastInvoice = invoices[0]
-    const overdueInvoices = invoices.filter(inv =>
-      parseFloat(inv.amountremaining) > 0 && inv.status !== 'Paid In Full'
-    )
-    const overdueTotal = overdueInvoices.reduce((sum, inv) => sum + parseFloat(inv.amountremaining || '0'), 0)
+  function appendNsNotes(data: NsData) {
+    const c = data.customer ?? {}
+    const inv = data.invoices
+    const overdue = data.overdue
 
     const nsBlock = `
 --- NetSuite Data ---
-Customer Name: ${customer.companyname}
-Customer Status: ${customer.entitystatus || 'Not Found'}
-Billing Address: ${addr || 'Not Found'}
-Email: ${customer.email || 'Not Found'}
-Phone: ${customer.phone || 'Not Found'}
-${sub ? `
-Subscription ID: ${sub.id}
-Subscription Name: ${sub.name}
-Subscription Status: ${sub.status}
-Contract Start Date: ${sub.startdate || 'Not Found'}
-Contract End Date: ${sub.enddate || 'Not Found'}
-ARR: ${sub.annualrevenue || 'Not Found'}
-Total Contract Value: ${sub.totalcontractvalue || 'Not Found'}
-Auto-Renewal: ${sub.autorenewal || 'Not Found'}
-` : 'Subscription: Not Found'}
-Last Invoice: ${lastInvoice ? `${lastInvoice.tranid} | ${lastInvoice.trandate} | Status: ${lastInvoice.status} | Amount: ${lastInvoice.amount} | Remaining: ${lastInvoice.amountremaining}` : 'Not Found'}
-Overdue Balance: ${overdueTotal > 0 ? `$${overdueTotal.toFixed(2)} across ${overdueInvoices.length} invoice(s)` : 'None'}
+Customer Name: ${((c.companyName ?? c.name ?? nsSearch) || 'Not Found') as string}
+Customer Status: ${(c.status ?? c.entityStatus ?? 'Not Found') as string}
+Billing Address: ${(c.billingAddress ?? c.address ?? 'Not Found') as string}
+Customer ID: ${data.customer_id ?? 'Not Found'}
+Last Invoice: ${inv?.latest_invoice ? `${inv.latest_invoice.tranid ?? inv.latest_invoice.invoice_id} | Status: ${inv.latest_invoice.status} | Amount: ${inv.latest_invoice.amount}` : 'Not Found'}
+Total Invoices Found: ${inv?.total ?? 0}
+Overdue Balance: ${JSON.stringify(overdue) !== 'null' && overdue ? JSON.stringify(overdue) : 'None'}
 ---`
 
     setNotes(prev => {
-      // Remove old NS block if present
       const cleaned = prev.replace(/\n?--- NetSuite Data ---[\s\S]*?---\n?/g, '').trim()
       return cleaned ? `${cleaned}\n${nsBlock}` : nsBlock
     })
@@ -367,7 +320,7 @@ Opportunity ID: ${opp.Id}
                     </div>
                     <button
                       type="button"
-                      onClick={() => { setSfSelected(null); setSfSearch(''); setCustomerName(''); setNotes(''); setNsData(null); setNsSelectedCustomer(null); setNsSelectedSub(null); setNsSearch('') }}
+                      onClick={() => { setSfSelected(null); setSfSearch(''); setCustomerName(''); setNotes(''); setNsData(null); setNsError(''); setNsSearch('') }}
                       className="text-xs text-gray-400 underline ml-3"
                     >
                       Clear
@@ -404,63 +357,36 @@ Opportunity ID: ${opp.Id}
                 {nsError && <p className="text-red-500 text-xs mt-1">{nsError}</p>}
                 </div>
 
-                {/* Multiple customer matches */}
-                {nsData && nsData.customers.length > 1 && !nsSelectedCustomer && (
-                  <ul className="mt-2 border border-gray-100 rounded-lg divide-y divide-gray-100 shadow-sm">
-                    {nsData.customers.map(c => (
-                      <li
-                        key={c.id}
-                        onClick={() => selectNsCustomer(c)}
-                        className="px-4 py-2.5 cursor-pointer hover:bg-gray-50 transition-colors"
-                      >
-                        <p className="text-sm font-medium text-gray-800">{c.companyname}</p>
-                        <p className="text-xs text-gray-400">Status: {c.entitystatus} · {[c.city, c.state, c.country].filter(Boolean).join(', ')}</p>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-
                 {/* NS summary card */}
-                {nsSelectedCustomer && (
+                {nsData && (nsData.customer || nsData.invoices) && (
                   <div className="mt-2 rounded-lg px-3 py-2 text-sm space-y-1" style={{ backgroundColor: '#eef2ff' }}>
                     <div className="flex items-center justify-between">
-                      <p className="font-medium text-gray-800">✓ {nsSelectedCustomer.companyname}</p>
+                      <p className="font-medium text-gray-800">✓ NetSuite data loaded</p>
                       <button
                         type="button"
-                        onClick={() => { setNsData(null); setNsSelectedCustomer(null); setNsSelectedSub(null); setNsSearch('') }}
+                        onClick={() => { setNsData(null); setNsError(''); setNsSearch('') }}
                         className="text-xs text-gray-400 underline ml-3"
                       >
                         Clear
                       </button>
                     </div>
-                    <p className="text-xs text-gray-600">Status: <span className="font-medium">{nsSelectedCustomer.entitystatus || 'Unknown'}</span></p>
-                    {nsSelectedSub && (
-                      <>
-                        <p className="text-xs text-gray-600">
-                          Subscription: <span className="font-medium">{nsSelectedSub.name}</span> · <span className="font-medium">{nsSelectedSub.status}</span>
-                        </p>
-                        <p className="text-xs text-gray-600">
-                          Term: {nsSelectedSub.startdate} → {nsSelectedSub.enddate} · ARR: {nsSelectedSub.annualrevenue} · Auto-Renewal: {nsSelectedSub.autorenewal}
-                        </p>
-                      </>
-                    )}
-                    {nsData && nsData.invoices.length > 0 && (
+                    {nsData.customer && (
                       <p className="text-xs text-gray-600">
-                        Last Invoice: {nsData.invoices[0].tranid} · {nsData.invoices[0].status} · Remaining: {nsData.invoices[0].amountremaining}
+                        Status: <span className="font-medium">{String(nsData.customer.status ?? nsData.customer.entityStatus ?? 'Unknown')}</span>
                       </p>
                     )}
-                    {nsData?.errors.subscription && (
-                      <p className="text-xs text-amber-600">Subscription query: {nsData.errors.subscription}</p>
+                    {nsData.invoices && (
+                      <p className="text-xs text-gray-600">
+                        Invoices: <span className="font-medium">{nsData.invoices.total}</span>
+                        {nsData.invoices.latest_invoice && ` · Last: ${nsData.invoices.latest_invoice.status}`}
+                      </p>
                     )}
-                  </div>
-                )}
-
-                {/* NS errors */}
-                {nsData && Object.values(nsData.errors).some(Boolean) && !nsSelectedCustomer && (
-                  <div className="mt-1 text-xs text-amber-600 space-y-0.5">
-                    {nsData.errors.customer && <p>Customer: {nsData.errors.customer}</p>}
-                    {nsData.errors.subscription && <p>Subscription: {nsData.errors.subscription}</p>}
-                    {nsData.errors.invoice && <p>Invoice: {nsData.errors.invoice}</p>}
+                    {nsData.overdue && (
+                      <p className="text-xs text-amber-700">
+                        Overdue: {JSON.stringify(nsData.overdue)}
+                      </p>
+                    )}
+                    <p className="text-xs text-gray-400">NS data added to notes for AI analysis</p>
                   </div>
                 )}
               </div>
