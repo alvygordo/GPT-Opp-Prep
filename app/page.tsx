@@ -46,6 +46,7 @@ export default function Home() {
   const [files, setFiles] = useState<File[]>([])
   const [loading, setLoading] = useState(false)
   const [report, setReport] = useState('')
+  const [reportId, setReportId] = useState('')
   const [error, setError] = useState('')
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -211,11 +212,14 @@ Opportunity ID: ${opp.Id}
       const data = await response.json()
       if (!response.ok) throw new Error(data.error)
 
-      await supabase
+      const { data: savedReport } = await supabase
         .from('reports')
         .insert({ opportunity_id: opp.id, report_output: data.result })
+        .select('id')
+        .single()
 
       setReport(data.result)
+      if (savedReport?.id) setReportId(savedReport.id)
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Something went wrong')
     } finally {
@@ -242,9 +246,12 @@ Opportunity ID: ${opp.Id}
             <p className="text-white/80 text-xs leading-tight">Sales Ops - Core Renewals</p>
           </div>
         </div>
-        <div className="flex items-center gap-1.5">
-          <div className="w-2 h-2 rounded-full bg-green-300"></div>
-          <span className="text-white text-xs">Live</span>
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1.5">
+            <div className="w-2 h-2 rounded-full bg-green-300"></div>
+            <span className="text-white text-xs">Live</span>
+          </div>
+          <a href="/reports" className="text-white/80 text-xs underline">Recent Reports</a>
         </div>
       </div>
 
@@ -466,20 +473,55 @@ Opportunity ID: ${opp.Id}
 
         {/* Report output */}
         {report && (
-          <div className="mt-6 bg-white rounded-2xl shadow-sm p-6">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-base font-bold text-gray-800">Report</h2>
-              <button
-                onClick={copyToClipboard}
-                className="text-sm text-white px-4 py-1.5 rounded-lg font-medium"
-                style={{ backgroundColor: '#2dbda8' }}
-              >
-                Copy for Google Sheets
-              </button>
+          <div className="mt-6 space-y-3">
+
+            {/* Link bar */}
+            <div className="bg-white rounded-2xl shadow-sm px-5 py-3 flex items-center justify-between gap-3">
+              <div className="flex-1 min-w-0">
+                <p className="text-xs text-gray-500 mb-0.5">Shareable report link</p>
+                <p className="text-xs font-mono text-gray-700 truncate">
+                  {typeof window !== 'undefined' ? `${window.location.origin}/report/${reportId}` : `/report/${reportId}`}
+                </p>
+              </div>
+              <div className="flex gap-2 shrink-0">
+                <button
+                  onClick={() => {
+                    const url = `${window.location.origin}/report/${reportId}`
+                    navigator.clipboard.writeText(url)
+                    alert('Link copied!')
+                  }}
+                  className="text-sm text-gray-600 px-3 py-1.5 rounded-lg font-medium border border-gray-200 whitespace-nowrap"
+                >
+                  Copy Link
+                </button>
+                <a
+                  href={`/report/${reportId}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-sm text-white px-3 py-1.5 rounded-lg font-medium whitespace-nowrap"
+                  style={{ backgroundColor: '#2dbda8' }}
+                >
+                  Open
+                </a>
+              </div>
             </div>
-            <pre className="whitespace-pre-wrap text-sm text-gray-700 font-mono leading-relaxed overflow-x-auto">
-              {report}
-            </pre>
+
+            {/* Report body */}
+            <div className="bg-white rounded-2xl shadow-sm p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-base font-bold text-gray-800">Report</h2>
+                <button
+                  onClick={copyToClipboard}
+                  className="text-sm text-white px-4 py-1.5 rounded-lg font-medium"
+                  style={{ backgroundColor: '#2dbda8' }}
+                >
+                  Copy for Google Sheets
+                </button>
+              </div>
+              <pre className="whitespace-pre-wrap text-sm text-gray-700 font-mono leading-relaxed overflow-x-auto">
+                {report}
+              </pre>
+            </div>
           </div>
         )}
 
