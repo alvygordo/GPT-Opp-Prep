@@ -74,6 +74,7 @@ export default function Home() {
   const [sfSelected, setSfSelected] = useState<SfOpportunity | null>(null)
   const [sfError, setSfError] = useState('')
 
+  const [nsSearch, setNsSearch] = useState('')
   const [nsSearching, setNsSearching] = useState(false)
   const [nsData, setNsData] = useState<NsData | null>(null)
   const [nsError, setNsError] = useState('')
@@ -125,7 +126,7 @@ export default function Home() {
   }
 
   async function searchNetsuite(name?: string) {
-    const query = name || customerName
+    const query = name || nsSearch || customerName
     if (!query.trim()) return
     setNsSearching(true)
     setNsError('')
@@ -366,7 +367,7 @@ Opportunity ID: ${opp.Id}
                     </div>
                     <button
                       type="button"
-                      onClick={() => { setSfSelected(null); setSfSearch(''); setCustomerName(''); setNotes(''); setNsData(null); setNsSelectedCustomer(null); setNsSelectedSub(null) }}
+                      onClick={() => { setSfSelected(null); setSfSearch(''); setCustomerName(''); setNotes(''); setNsData(null); setNsSelectedCustomer(null); setNsSelectedSub(null); setNsSearch('') }}
                       className="text-xs text-gray-400 underline ml-3"
                     >
                       Clear
@@ -377,23 +378,31 @@ Opportunity ID: ${opp.Id}
 
               {/* NetSuite Panel */}
               <div>
-                <div className="flex items-center justify-between mb-1">
-                  <div>
-                    <p className="text-sm font-semibold text-gray-700">NetSuite Lookup</p>
-                    <p className="text-xs text-gray-400">Auto-triggered when SF opp is selected. Or search manually.</p>
-                  </div>
+                <p className="text-sm font-semibold text-gray-700 mb-0.5">NetSuite Lookup</p>
+                <p className="text-xs text-gray-400 mb-2">NS customer name may differ from Salesforce — enter the exact NS name below.</p>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={nsSearch}
+                    onChange={e => setNsSearch(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), searchNetsuite())}
+                    placeholder="Type NetSuite customer name..."
+                    className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                  />
                   <button
                     type="button"
                     onClick={() => searchNetsuite()}
-                    disabled={nsSearching || !customerName.trim()}
-                    className="text-white px-3 py-1.5 rounded-lg text-xs font-medium disabled:opacity-40"
+                    disabled={nsSearching || (!nsSearch.trim() && !customerName.trim())}
+                    className="text-white px-4 py-2 rounded-lg text-sm font-medium disabled:opacity-40"
                     style={{ backgroundColor: '#6366f1' }}
                   >
-                    {nsSearching ? 'Searching NS...' : 'Search NS'}
+                    {nsSearching ? '...' : 'Search NS'}
                   </button>
                 </div>
+                <div>
 
                 {nsError && <p className="text-red-500 text-xs mt-1">{nsError}</p>}
+                </div>
 
                 {/* Multiple customer matches */}
                 {nsData && nsData.customers.length > 1 && !nsSelectedCustomer && (
@@ -418,7 +427,7 @@ Opportunity ID: ${opp.Id}
                       <p className="font-medium text-gray-800">✓ {nsSelectedCustomer.companyname}</p>
                       <button
                         type="button"
-                        onClick={() => { setNsData(null); setNsSelectedCustomer(null); setNsSelectedSub(null) }}
+                        onClick={() => { setNsData(null); setNsSelectedCustomer(null); setNsSelectedSub(null); setNsSearch('') }}
                         className="text-xs text-gray-400 underline ml-3"
                       >
                         Clear
