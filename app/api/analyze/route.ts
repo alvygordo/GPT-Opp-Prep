@@ -15,35 +15,55 @@ Never invent data. If a field is missing, write "Missing" or "Not Found". Never 
 ---
 
 SECTION 1: CONTRACT SUMMARY
-Extract the following fields from the uploaded contract documents. Use exact values from the contract — do not estimate.
+Extract the following fields from the uploaded contract documents. Use exact values from the contract — do not estimate. If a field cannot be found, write "Not Found".
 
-Output as a two-column table: Field | Value
+Output as a three-column table with headers: # | Data Field | Details
 
-Fields to extract:
-- Customer Name
-- Contract Name / Service Order #
-- Type of Contract
-- Governing Contract (MSA, GCC, etc.)
-- Contract Start Date
-- Contract End Date
-- Term (months)
-- Current ARR
-- Current TCV
-- Product Family
-- Licensed Modules / Products
-- Support Level
-- Payment Terms
-- Auto-Renewal Clause Present (Yes / No)
-- Notice Period
-- Notice Deadline (Contract End Date minus notice period)
-- Price Cap / Fixed Pricing (Yes / No — include clause reference if yes)
-- NNR Required (Yes / No)
-- Partner / Reseller (Yes / No — include name if yes)
-- End User (if different from bill-to)
-- Billing Address
-- Suitability for NNR
-- Contract on ESW 2019+ Paper (Yes / No)
-- Missing Documents (list any required docs not found)
+Rows to extract (in this exact order):
+1  | Filename                              | Full filename of the uploaded document
+2  | Contract name or reference            | Contract name, quote number, or service order reference
+3  | Type of contract                      | e.g. Renewal Quote, MSA, SOW, Amendment
+4  | List of other governing contracts     | All referenced governing agreements (MSA, GCC, DPA, etc.) with dates
+5  | Customer details                      | Full legal name and address of the customer/bill-to party
+6  | Supplier details                      | Full legal name and address of Khoros/ESW supplier entity
+7  | Date signed by customer               | Signature date by customer (estimate if not explicitly stated)
+8  | Date signed by supplier               | Signature date by supplier
+9  | Product                               | Top-level product family name(s)
+10 | Purpose of contract                   | Brief bullet summary of what the contract covers
+11 | Start date of services                | MM/DD/YYYY
+12 | End date of services                  | MM/DD/YYYY
+13 | End date of contract                  | MM/DD/YYYY (note auto-renewal if applicable)
+14 | Contract service term in months       | Numeric value
+15 | ARR (Annual Recurring Revenue)        | Annual value in original contract currency
+16 | Total contract value                  | Total TCV in original contract currency
+17 | Support level                         | e.g. Standard Success, Premier, etc.
+18 | Number of production orgs             | Count of production instances
+19 | Licensed Product Modules              | Full list of licensed modules and features
+20 | Business Services                     | Any implementation, professional, or managed services included
+21 | Success level                         | e.g. Standard Success, Premier Success
+22 | Add-ons                               | Any additional SKUs, usage packs, or add-on items included
+23 | Other services included               | Any other services not covered above (or N/A)
+24 | Itemized pricing                      | Line-item breakdown with quantities and prices
+25 | Summary of charges                    | Year-by-year or total charge summary
+26 | Possible missing documents            | Any referenced documents not found in the upload
+27 | Invoicing and Payment terms           | Invoicing frequency and payment due terms (e.g. Annually, Net 30)
+28 | Auto-renewal clause details           | All of the following sub-items:
+   |                                       | • Provides for automatic renewal: Yes / No (cite clause)
+   |                                       | • Party responsible for notice: Customer / Supplier / Both
+   |                                       | • Notice period: X days prior to expiration (cite clause)
+   |                                       | • Limits price increase: Yes / No (explain)
+   |                                       | • Clause reference: [clause name/number]
+   |                                       | • Is auto-renewal toxic for supplier: Yes / No
+29 | Has renewal price increase cap        | Yes / No — explain terms and whether toxic for supplier
+30 | Customer termination rights           | Yes / No — describe rights and whether toxic for supplier
+31 | Supplier termination rights           | Yes / No — describe rights and whether toxic for supplier
+32 | Can Supplier terminate at anniversary?| Yes / No — cite clause
+33 | Supplier liability                    | Summarize liability caps or references to master agreement
+34 | Has preferential pricing for customer | Yes / No
+35 | Customer IP ownership rights          | Yes / No — describe if applicable
+36 | Toxic clauses identified              | List any clauses flagged as toxic; state "None" if clean
+37 | Suitability for a Notice of Non-Renewal | SUITABLE / DISCRETIONARY / NOT SUITABLE — brief rationale
+38 | Notice Requirements for Supplier      | Clause reference, method, address, and any special instructions (e.g. cancellation email)
 
 ---
 
