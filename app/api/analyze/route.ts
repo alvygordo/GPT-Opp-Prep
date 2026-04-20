@@ -94,16 +94,16 @@ Partner: [Y or N — Y if bill-to differs from ship-to, or if NS shows a reselle
 Auto-renewal: [Yes or No — if Yes: "Yes — Page X, Clause Y"; if No: "No"]
 Notice period: [X days — Page X, Clause Y; or "N/A — no auto-renewal clause"]
 Price cap: [state cap % and cite location, or "No cap — Page X, Clause Y", or "N/A — no auto-renewal clause"]
-NetSuite IDs validated: [NS status: Active / Closed / Terminated / etc.]
+NetSuite IDs validated: [Look in the NS data for STATUS or NS Subscription Status field. Answer with the exact status value: Active / Closed / Terminated / Draft. If the NS RAW data contains a "status" or "entityStatus" field, use that value.]
 ARR: [currency + amount from contract, note mismatch if any]
 TCV: [currency + amount from contract, note mismatch if any]
 Parent opp checked: [Y or N based on SF data]
-Co-term: [Y or N — note any upsell/upgrade opps]
+Co-term: [Answer Y ONLY if there is an explicit Upsell or Upgrade opportunity visible in the SF data provided. If no such opp is present in the SF data, answer N. Never assume or speculate about co-terming.]
 Contacts and addresses updated: [Y if SF and NS addresses match, N if they differ]
 Create quote: [PQ ready / PQ and ARQ ready — see rules below]
 NS status active: [exact NS status]
 AR'd last renewal: [Y or N from SF Auto-Renewed Last Term field]
-Last invoice paid: [Paid in full / Unpaid / Partial — from NS]
+Last invoice paid: [Check NS Last Invoice Status field. If status is "Paid In Full" answer "Paid in full". If status is "Open" answer "Unpaid". Use the NS RAW Invoice Data if the named field is not found. If no invoice data at all, answer "Not Found".]
 AR health check - Collection red flag: [No / Yes — include overdue amount if Yes]
 Escalated to VP/BU?: [Y if overdue balance exists; N if no overdue balance]
 Contract summary created: [leave blank]
@@ -122,8 +122,40 @@ Create Quote rules:
 - If no auto-renewal clause: Primary Quote + Offer Quote only required → answer "PQ ready" if both are in SF
 - If quotes are not yet in SF, answer "Not yet created"
 
-NOTE (add this section only if there are data mismatches):
-[Describe any ARR/TCV mismatches between contract, SF, and NS. Recommend raising to Stuck Opps tracker if applicable.]
+NOTE (add this block only if there are ARR/TCV mismatches between contract, SF, and NS):
+Current ARR mismatch with SQ. [describe mismatch]. Recommend raising to Stuck Opps tracker.
+
+---
+
+SECTION 3: SUMMARY AND RECOMMENDATIONS
+
+Write in plain text. No table. Cover all three sub-sections below.
+
+1. DATA ALIGNMENT
+Compare the contract, Salesforce, and NetSuite values for ARR, TCV, dates, customer name, and addresses.
+- If values match across all sources: write "No mismatches found."
+- If there are mismatches: list each one specifically (e.g. "ARR on contract is USD 23,906.25 but SF shows USD 22,000")
+- Note any missing data in SF or NS that should be present
+
+2. KEY RISKS
+List only real, specific risks found in this opportunity. Use this priority order:
+- Overdue balance / collection red flag (name the amount)
+- Missing documents referenced but not uploaded
+- Toxic clauses (price cap, customer termination for convenience) — include clause reference
+- NNR deadline approaching — include specific date
+- ARR/TCV data mismatch between systems
+- Legal case required for first-time non-ESW paper renewal
+DO NOT flag missing auto-renewal as a risk for reseller/partner contracts — this is normal.
+If no risks exist, write "No key risks identified."
+
+3. RECOMMENDED NEXT STEPS
+List specific, prioritized, actionable steps for the Sales Ops rep. Reference exact fields, systems, and actions.
+Examples of good next steps:
+- "Update ARR in SF and NS to match contract value of USD X — raise to Stuck Opps tracker"
+- "Send NNR by [date] via [method] to [address]"
+- "Create Legal case — first-time renewal on non-ESW paper"
+- "Escalate overdue balance of $X to VP/Opp owner"
+- "Confirm Parent Opportunity is linked in SF Renewals section"
 
 ---
 
@@ -131,9 +163,10 @@ FORMATTING RULES
 - Dates in Section 1: DD-Mon-YYYY (e.g. 18-Dec-2025)
 - Dates in Section 2: MMM DD YYYY (e.g. Oct 16 2026)
 - Currency: always include symbol and code (e.g. USD 23,906.25)
-- Section headers: all caps
+- Section headers must be exactly: SECTION 1: CONTRACT SUMMARY / SECTION 2: OPP PREP CHECKLIST / SECTION 3: SUMMARY AND RECOMMENDATIONS
 - Section 1 table: tab-separated, no pipes, no markdown formatting
 - Section 2: plain text, one line per item, no table, no bullets
+- Section 3: plain text paragraphs, no table
 - Everything must be paste-ready for Google Sheets`
 
 type FileInput = {
@@ -144,18 +177,30 @@ type FileInput = {
 
 export async function POST(request: NextRequest) {
   try {
-    const { customerName, notes, files } = await request.json() as {
+    const { customerName, notes, files, currentDate, sfUserName } = await request.json() as {
       customerName: string
       notes: string
       files: FileInput[]
+      currentDate?: string
+      sfUserName?: string
     }
+
+    const dateToUse = currentDate || new Date().toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' })
+    const nameToUse = sfUserName || 'Sales Ops'
 
     const contentBlocks: OpenAI.Chat.ChatCompletionContentPart[] = []
 
     // Add text context
     contentBlocks.push({
       type: 'text',
-      text: `Customer: ${customerName}\n\nPlease analyze the uploaded documents and produce the full Opp Prep report.\n\nAdditional notes:\n${notes || 'None provided'}`
+      text: `Customer: ${customerName}
+Today's date: ${dateToUse}
+Prepared by (Sales Ops name): ${nameToUse}
+
+Please analyze the uploaded documents and produce the full Opp Prep report.
+
+Additional notes (includes Salesforce and NetSuite data):
+${notes || 'None provided'}`
     })
 
     // Add files — images and PDFs both supported natively by gpt-4o

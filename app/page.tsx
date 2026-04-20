@@ -139,15 +139,33 @@ export default function Home() {
     const inv = data.invoices
     const overdue = data.overdue
 
+    // Extract latest invoice details — try multiple field name patterns
+    const latestInv = inv?.latest_invoice
+    const invoiceStatus = latestInv
+      ? (latestInv.status ?? latestInv.paymentstatus ?? latestInv.payment_status ?? 'Unknown')
+      : 'Not Found'
+    const invoiceAmount = latestInv ? (latestInv.amount ?? latestInv.total ?? '') : ''
+    const invoiceId = latestInv ? (latestInv.tranid ?? latestInv.invoice_id ?? latestInv.id ?? '') : ''
+    const invoiceDate = latestInv ? (latestInv.date ?? latestInv.trandate ?? '') : ''
+
+    // Subscription status — try multiple field name patterns
+    const subStatus = (c.subscriptionStatus ?? c.subscription_status ?? c.status ?? c.entityStatus ?? c.custrecord_status ?? '') as string
+
     const nsBlock = `
 --- NetSuite Data ---
-Customer Name: ${((c.companyName ?? c.name ?? nsSearch) || 'Not Found') as string}
-Customer Status: ${(c.status ?? c.entityStatus ?? 'Not Found') as string}
-Billing Address: ${(c.billingAddress ?? c.address ?? 'Not Found') as string}
-Customer ID: ${data.customer_id ?? 'Not Found'}
-Last Invoice: ${inv?.latest_invoice ? `${inv.latest_invoice.tranid ?? inv.latest_invoice.invoice_id} | Status: ${inv.latest_invoice.status} | Amount: ${inv.latest_invoice.amount}` : 'Not Found'}
-Total Invoices Found: ${inv?.total ?? 0}
-Overdue Balance: ${JSON.stringify(overdue) !== 'null' && overdue ? JSON.stringify(overdue) : 'None'}
+NS Customer ID: ${data.customer_id ?? 'Not Found'}
+NS Customer Name: ${((c.companyName ?? c.entityid ?? c.name ?? nsSearch) || 'Not Found') as string}
+NS Customer Status: ${(c.status ?? c.entityStatus ?? 'Not Found') as string}
+NS Subscription Status: ${subStatus || 'Not Found'}
+NS Billing Address: ${(c.billingAddress ?? c.defaultaddress ?? c.address ?? 'Not Found') as string}
+NS Last Invoice ID: ${invoiceId || 'Not Found'}
+NS Last Invoice Date: ${invoiceDate || 'Not Found'}
+NS Last Invoice Amount: ${invoiceAmount ? `$${invoiceAmount}` : 'Not Found'}
+NS Last Invoice Status: ${invoiceStatus}
+NS Total Invoices Found: ${inv?.total ?? 0}
+NS Overdue Balance: ${JSON.stringify(overdue) !== 'null' && overdue ? JSON.stringify(overdue) : 'None'}
+NS RAW Customer Data: ${JSON.stringify(c)}
+NS RAW Invoice Data: ${JSON.stringify(inv)}
 ---`
 
     setNotes(prev => {
@@ -203,10 +221,13 @@ Opportunity ID: ${opp.Id}
           .upload(`${opp.id}/${file.name}`, file)
       }
 
+      const currentDate = new Date().toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' })
+      const sfUserName = sfSelected?.['Owner.Name'] ?? 'Sales Ops'
+
       const response = await fetch('/api/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ customerName, notes, files: fileContents })
+        body: JSON.stringify({ customerName, notes, files: fileContents, currentDate, sfUserName })
       })
 
       const data = await response.json()
