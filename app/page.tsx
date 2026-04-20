@@ -242,7 +242,9 @@ NetSuite Status (SF): ${(opp as any).NetSuite_Status__c ?? 'Not set'}
       }
 
       const currentDate = new Date().toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' })
-      const sfUserName = sfSelected?.['Owner.Name'] ?? 'Sales Ops'
+      const sfUserName = document.cookie.split('; ').find(r => r.startsWith('opp_prep_user_name='))?.split('=')[1]
+        ? decodeURIComponent(document.cookie.split('; ').find(r => r.startsWith('opp_prep_user_name='))!.split('=')[1])
+        : 'Sales Ops'
 
       const response = await fetch('/api/analyze', {
         method: 'POST',

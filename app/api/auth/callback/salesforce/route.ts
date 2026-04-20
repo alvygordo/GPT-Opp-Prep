@@ -40,6 +40,7 @@ export async function GET(request: NextRequest) {
     const userData = await userRes.json()
 
     const email = userData.email?.toLowerCase().trim()
+    const displayName = userData.display_name || userData.name || `${userData.first_name ?? ''} ${userData.last_name ?? ''}`.trim() || email
 
     if (!email) {
       return NextResponse.redirect(new URL('/login?error=no_email', request.url))
@@ -47,6 +48,11 @@ export async function GET(request: NextRequest) {
 
     const response = NextResponse.redirect(new URL('/', request.url))
     response.cookies.set('opp_prep_user', email, {
+      path: '/',
+      maxAge: 86400,
+      httpOnly: false
+    })
+    response.cookies.set('opp_prep_user_name', displayName, {
       path: '/',
       maxAge: 86400,
       httpOnly: false

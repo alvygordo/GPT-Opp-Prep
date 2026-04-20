@@ -56,11 +56,11 @@ Rows in this exact order:
 26[TAB]Possible missing documents[TAB]List any referenced documents not present in the upload (e.g. governing MSA/Reseller Agreement); write "None" if all referenced docs are present
 27[TAB]Invoicing and Payment terms[TAB]Billing frequency and payment due terms (e.g. Annually, due at start of term; Net 30)
 28[TAB]Auto-renewal clause details[TAB]Provide ALL of the following bullet points:
-   [TAB][TAB]• Auto-renewal: Yes / No — if Yes cite page and clause number; if No state "N/A - no auto-renewal provision in this document"
-   [TAB][TAB]• Notice of non-renewal: state notice period and deadline; write N/A if no auto-renewal
+   [TAB][TAB]• Auto-renewal: ONLY answer Yes if the contract document explicitly contains the phrase "automatically renew" or "auto-renew" or equivalent. Do NOT infer or assume auto-renewal from the fact that a document is a renewal quote. If the phrase is not present in the document, answer "No - no auto-renewal provision found in this document." Cite the exact page and clause if Yes.
+   [TAB][TAB]• Notice of non-renewal: state notice period and deadline; write "N/A - no auto-renewal clause" if No
    [TAB][TAB]• Price increase limit: state cap percentage or "N/A" if none
    [TAB][TAB]• Toxic: Yes / No — state N/A if no auto-renewal provision
-   NOTE: Reseller/partner contracts commonly do not contain auto-renewal clauses — this is normal and NOT a toxic or risk flag by itself
+   NOTE: Reseller/partner contracts commonly do not contain auto-renewal clauses — this is completely normal and NOT a toxic or risk flag
 29[TAB]Has renewal price increase cap[TAB]Yes / No — if Yes state the cap % and cite page/clause; if No write "No, NOT TOXIC" with brief note; if not addressed write "No, NOT TOXIC (document is silent)"
 30[TAB]Customer termination rights[TAB]Yes / No — describe; note if toxic for supplier (termination for convenience = toxic)
 31[TAB]Supplier termination rights[TAB]Yes / No — describe; note if toxic (no right to terminate for convenience = toxic for supplier)
