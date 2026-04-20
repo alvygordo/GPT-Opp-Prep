@@ -177,7 +177,7 @@ export async function POST(request: NextRequest) {
       text: `Customer: ${customerName}\n\nPlease analyze the uploaded documents and produce the full Opp Prep report.\n\nAdditional notes:\n${notes || 'None provided'}`
     })
 
-    // Add image files
+    // Add files — images and PDFs both supported natively by gpt-4o
     for (const file of files || []) {
       if (file.type.startsWith('image/')) {
         contentBlocks.push({
@@ -192,10 +192,17 @@ export async function POST(request: NextRequest) {
           text: `(Above image: ${file.name})`
         })
       } else if (file.type === 'application/pdf') {
-        // PDFs: send as file upload note — GPT-4o vision doesn't support PDF base64 directly
+        // GPT-4o supports PDFs natively via base64 file content blocks
+        contentBlocks.push({
+          type: 'file',
+          file: {
+            filename: file.name,
+            file_data: `data:application/pdf;base64,${file.data}`
+          }
+        } as unknown as OpenAI.Chat.ChatCompletionContentPart)
         contentBlocks.push({
           type: 'text',
-          text: `[PDF uploaded: ${file.name} — please treat this as a document reference]`
+          text: `(Above document: ${file.name})`
         })
       }
     }
