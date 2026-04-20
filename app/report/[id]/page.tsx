@@ -20,6 +20,24 @@ export default function ReportPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [copied, setCopied] = useState(false)
+  const [copiedSection, setCopiedSection] = useState<string | null>(null)
+
+  function copySection(sectionText: string, label: string) {
+    navigator.clipboard.writeText(sectionText.trim())
+    setCopiedSection(label)
+    setTimeout(() => setCopiedSection(null), 2000)
+  }
+
+  function parseSections(text: string): { label: string; content: string }[] {
+    const sectionPattern = /^(SECTION \d+[^\n]*)/gm
+    const matches = [...text.matchAll(sectionPattern)]
+    if (matches.length === 0) return [{ label: 'Full Report', content: text }]
+    return matches.map((match, i) => {
+      const start = match.index!
+      const end = matches[i + 1]?.index ?? text.length
+      return { label: match[1].trim(), content: text.slice(start, end) }
+    })
+  }
 
   useEffect(() => {
     async function load() {
@@ -110,12 +128,24 @@ export default function ReportPage() {
               </div>
             </div>
 
-            {/* Report body */}
-            <div className="bg-white rounded-2xl shadow-sm p-6">
-              <pre className="whitespace-pre-wrap text-sm text-gray-700 font-mono leading-relaxed overflow-x-auto">
-                {report.report_output}
-              </pre>
-            </div>
+            {/* Report body — per-section copy buttons */}
+            {parseSections(report.report_output).map((section, i) => (
+              <div key={i} className="bg-white rounded-2xl shadow-sm p-6 mb-4">
+                <div className="flex justify-between items-center mb-3">
+                  <h2 className="text-sm font-bold text-gray-700">{section.label}</h2>
+                  <button
+                    onClick={() => copySection(section.content, section.label)}
+                    className="text-xs text-white px-3 py-1.5 rounded-lg font-medium whitespace-nowrap"
+                    style={{ backgroundColor: copiedSection === section.label ? '#16a34a' : '#2dbda8' }}
+                  >
+                    {copiedSection === section.label ? 'Copied!' : 'Copy Section'}
+                  </button>
+                </div>
+                <pre className="whitespace-pre-wrap text-sm text-gray-700 font-mono leading-relaxed overflow-x-auto">
+                  {section.content}
+                </pre>
+              </div>
+            ))}
           </>
         )}
       </div>
