@@ -37,6 +37,8 @@ type NsData = {
   } | null
   overdue: Record<string, unknown> | null
   customer_id: string | null
+  subscriptions?: unknown
+  subscription_status?: string | null
   error?: string
 }
 
@@ -151,12 +153,14 @@ export default function Home() {
     // Subscription status — try multiple field name patterns
     const subStatus = (c.subscriptionStatus ?? c.subscription_status ?? c.status ?? c.entityStatus ?? c.custrecord_status ?? '') as string
 
+    const nsSubscriptionStatus = data.subscription_status || subStatus || 'Not Found'
+
     const nsBlock = `
 --- NetSuite Data ---
 NS Customer ID: ${data.customer_id ?? 'Not Found'}
 NS Customer Name: ${((c.companyName ?? c.entityid ?? c.name ?? nsSearch) || 'Not Found') as string}
 NS Customer Status: ${(c.status ?? c.entityStatus ?? 'Not Found') as string}
-NS Subscription Status: ${subStatus || 'Not Found'}
+NS Subscription Status: ${nsSubscriptionStatus}
 NS Billing Address: ${(c.billingAddress ?? c.defaultaddress ?? c.address ?? 'Not Found') as string}
 NS Last Invoice ID: ${invoiceId || 'Not Found'}
 NS Last Invoice Date: ${invoiceDate || 'Not Found'}
@@ -166,6 +170,7 @@ NS Total Invoices Found: ${inv?.total ?? 0}
 NS Overdue Balance: ${JSON.stringify(overdue) !== 'null' && overdue ? JSON.stringify(overdue) : 'None'}
 NS RAW Customer Data: ${JSON.stringify(c)}
 NS RAW Invoice Data: ${JSON.stringify(inv)}
+NS RAW Subscription Data: ${JSON.stringify(data.subscriptions)}
 ---`
 
     setNotes(prev => {
@@ -179,6 +184,12 @@ NS RAW Invoice Data: ${JSON.stringify(inv)}
     setSfResults([])
     const accountName = opp['Account.Name'] || opp.Name
     setCustomerName(accountName)
+    const parentOppName = (opp as any)['Parent_Opportunity__r.Name'] || (opp as any)['Parent_Opportunity__r']?.Name || ''
+    const parentOppId = (opp as any)['Parent_Opportunity__c'] || ''
+    const parentOppDisplay = parentOppName || parentOppId
+      ? `${parentOppName || ''}${parentOppId ? ' (' + parentOppId + ')' : ''}`.trim()
+      : 'None'
+
     setNotes(`--- Salesforce Opportunity Data ---
 Opportunity Name: ${opp.Name}
 Account: ${opp['Account.Name']}
@@ -187,6 +198,15 @@ Close Date: ${opp.CloseDate}
 Amount: ${opp.Amount ? '$' + opp.Amount.toLocaleString() : 'Not set'}
 Owner: ${opp['Owner.Name']}
 Opportunity ID: ${opp.Id}
+SF ARR: ${(opp as any).ARR__c ?? 'Not set'}
+SF TCV: ${(opp as any).TCV__c ?? 'Not set'}
+Parent Opportunity (Renewals Section): ${parentOppDisplay}
+Auto-Renewed Last Term: ${(opp as any).Auto_Renewed_Last_Term__c ?? 'Not set'}
+Customer Termination Deadline: ${(opp as any).Customer_Termination_Deadline__c ?? 'Not set'}
+NS Subscription ID: ${(opp as any).NS_Subscription_ID__c ?? 'Not set'}
+NS Parent Subscription ID: ${(opp as any).NS_Parent_Subscription_ID__c ?? 'Not set'}
+NS Account ID: ${(opp as any).NS_Account_ID__c ?? 'Not set'}
+NetSuite Status (SF): ${(opp as any).NetSuite_Status__c ?? 'Not set'}
 ---`)
     // Auto-search NetSuite with the account name
     searchNetsuite(accountName)
@@ -417,9 +437,9 @@ Opportunity ID: ${opp.Id}
                         Clear
                       </button>
                     </div>
-                    {nsData.customer && (
+                    {(nsData.subscription_status || nsData.customer) && (
                       <p className="text-xs text-gray-600">
-                        Status: <span className="font-medium">{String(nsData.customer.status ?? nsData.customer.entityStatus ?? 'Unknown')}</span>
+                        NS Status: <span className="font-medium">{nsData.subscription_status || String(nsData.customer?.status ?? nsData.customer?.entityStatus ?? 'Unknown')}</span>
                       </p>
                     )}
                     {nsData.invoices && (

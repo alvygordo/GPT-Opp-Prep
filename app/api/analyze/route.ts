@@ -97,7 +97,7 @@ Price cap: [state cap % and cite location, or "No cap — Page X, Clause Y", or 
 NetSuite IDs validated: [Look in the NS data for STATUS or NS Subscription Status field. Answer with the exact status value: Active / Closed / Terminated / Draft. If the NS RAW data contains a "status" or "entityStatus" field, use that value.]
 ARR: [currency + amount from contract, note mismatch if any]
 TCV: [currency + amount from contract, note mismatch if any]
-Parent opp checked: [Y or N based on SF data]
+Parent opp checked: [Look for "Parent Opportunity (Renewals Section)" in the SF data. If the value is anything other than "None" or "Not set", answer Y and include the opp name. If it is None or Not set, answer N.]
 Co-term: [Answer Y ONLY if there is an explicit Upsell or Upgrade opportunity visible in the SF data provided. If no such opp is present in the SF data, answer N. Never assume or speculate about co-terming.]
 Contacts and addresses updated: [Y if SF and NS addresses match, N if they differ]
 Create quote: [PQ ready / PQ and ARQ ready — see rules below]

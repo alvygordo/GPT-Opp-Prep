@@ -78,24 +78,36 @@ export async function POST(request: NextRequest) {
       ?? invoicesData?.[0]?.customer_id
       ?? null
 
-    // Step 2: if we have a customer_id, fetch details + overdue balance in parallel
+    // Step 2: if we have a customer_id, fetch details + overdue balance + subscriptions in parallel
     let customerData = null
     let overdueData = null
+    let subscriptionData = null
 
     if (customerId) {
-      ;[customerData, overdueData] = await Promise.all([
+      ;[customerData, overdueData, subscriptionData] = await Promise.all([
         mcpCall(sessionId, 3, 'get_customer_details', { customer_id: String(customerId) })
           .catch(e => ({ error: e.message })),
         mcpCall(sessionId, 4, 'get_customer_overdue_balance', { customer_id: String(customerId) })
           .catch(e => ({ error: e.message })),
+        mcpCall(sessionId, 5, 'get_customer_subscriptions', { customer_id: String(customerId) })
+          .catch(() => null),
       ])
     }
+
+    // Extract subscription status from subscription data — try multiple shapes
+    const subList = Array.isArray(subscriptionData)
+      ? subscriptionData
+      : subscriptionData?.subscriptions ?? subscriptionData?.data ?? []
+    const latestSub = subList[0] ?? subscriptionData ?? null
+    const subscriptionStatus = latestSub?.status ?? latestSub?.subscriptionStatus ?? latestSub?.Status ?? null
 
     return NextResponse.json({
       customer: customerData,
       invoices: invoicesData,
       overdue: overdueData,
       customer_id: customerId,
+      subscriptions: subscriptionData,
+      subscription_status: subscriptionStatus,
     })
 
   } catch (error) {
