@@ -63,7 +63,11 @@ function Row({ label, value, highlight }: { label: string; value: string; highli
 function NsCard({ nsData, nsSearch, onClear }: { nsData: NsData; nsSearch: string; onClear: () => void }) {
   const latestInv = nsData.invoices?.latest_invoice
   const invStatus = latestInv ? String(latestInv.status ?? (latestInv as Record<string, unknown>).paymentstatus ?? '') : null
-  const hasOverdue = nsData.overdue && JSON.stringify(nsData.overdue) !== 'null' && JSON.stringify(nsData.overdue) !== '{}'
+  const overdueObj = nsData.overdue as Record<string, unknown> | null
+  const overdueAmt = overdueObj
+    ? parseFloat(String(overdueObj.overdue_balance ?? overdueObj.overdueBalance ?? overdueObj.balance ?? overdueObj.amount ?? '0'))
+    : 0
+  const hasOverdue = overdueAmt > 0
   const c = nsData.customer as Record<string, string> | null ?? {}
   const custName = String(c.companyName ?? c.entityid ?? c.name ?? nsSearch ?? '')
   const statusVal = nsData.subscription_status || String(c.status ?? c.entityStatus ?? 'Not Found')
@@ -100,7 +104,7 @@ function NsCard({ nsData, nsSearch, onClear }: { nsData: NsData; nsSearch: strin
         />
         <Row
           label="Collection Flag"
-          value={hasOverdue ? `YES — overdue balance exists` : 'No'}
+          value={hasOverdue ? `YES — $${overdueAmt.toLocaleString()}` : 'No'}
           highlight={hasOverdue ? 'red' : 'green'}
         />
       </div>
@@ -222,11 +226,16 @@ export default function Home() {
     const subStatus = (c.subscriptionStatus ?? c.subscription_status ?? c.status ?? c.entityStatus ?? c.custrecord_status ?? '') as string
 
     const nsSubscriptionStatus = data.subscription_status || subStatus || 'Not Found'
-    const hasOverdue = overdue && JSON.stringify(overdue) !== 'null' && JSON.stringify(overdue) !== '{}'
+
+    // Parse overdue balance value — check actual number, not just object existence
+    const overdueRaw = overdue as Record<string, unknown> | null
+    const overdueValue = overdueRaw
+      ? parseFloat(String(overdueRaw.overdue_balance ?? overdueRaw.overdueBalance ?? overdueRaw.balance ?? overdueRaw.amount ?? '0'))
+      : 0
+    const overdueDisplay = overdueValue > 0 ? `$${overdueValue.toLocaleString()}` : '0'
 
     const nsBlock = `
 --- NetSuite Data ---
-NS Customer ID: ${data.customer_id ?? 'Not Found'}
 NS Customer Name: ${((c.companyName ?? c.entityid ?? c.name ?? nsSearch) || 'Not Found') as string}
 NS Customer Status: ${(c.status ?? c.entityStatus ?? 'Not Found') as string}
 NS Subscription Status: ${nsSubscriptionStatus}
@@ -237,18 +246,12 @@ NS Start Date: ${data.start_date ?? 'Not Found'}
 NS End Date: ${data.end_date ?? 'Not Found'}
 NS Reseller: ${data.reseller ?? 'None'}
 NS End User: ${data.end_user ?? 'Not Found'}
-NS Auto Renewal: ${data.auto_renewal != null ? String(data.auto_renewal) : 'Not Found'}
 NS Billing Address: ${(c.billingAddress ?? c.defaultaddress ?? c.address ?? 'Not Found') as string}
 NS Last Invoice ID: ${invoiceId || 'Not Found'}
 NS Last Invoice Date: ${invoiceDate || 'Not Found'}
 NS Last Invoice Amount: ${invoiceAmount ? `$${invoiceAmount}` : 'Not Found'}
-NS Last Invoice Status: ${invoiceStatus}
 NS Total Invoices Found: ${inv?.total ?? 0}
-NS Overdue Balance: ${hasOverdue ? JSON.stringify(overdue) : 'None'}
-NS Collection Flag: ${hasOverdue ? 'YES - OVERDUE BALANCE EXISTS' : 'No'}
-NS RAW Customer Data: ${JSON.stringify(c)}
-NS RAW Invoice Data: ${JSON.stringify(inv)}
-NS RAW Subscription Data: ${JSON.stringify(data.subscriptions)}
+NS Overdue Balance: ${overdueDisplay}
 ---`
 
     setNotes(prev => {
