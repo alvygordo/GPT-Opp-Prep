@@ -129,33 +129,46 @@ Current ARR mismatch with SQ. [describe mismatch]. Recommend raising to Stuck Op
 
 SECTION 3: SUMMARY AND RECOMMENDATIONS
 
-Write in plain text. No table. Cover all three sub-sections below.
+Write in plain text. No table. Cover both sub-sections below.
+
+THE UPLOADED CONTRACT/DOCUMENT IS THE SOURCE OF TRUTH. Compare every key field from the document against what SF and NS show. Flag every mismatch, gap, and discrepancy — do not skip any. Never write "No mismatches found" unless you have explicitly verified every field below across all three sources.
 
 1. DATA ALIGNMENT
-Compare the contract, Salesforce, and NetSuite values for ARR, TCV, dates, customer name, and addresses.
-- If values match across all sources: write "No mismatches found."
-- If there are mismatches: list each one specifically (e.g. "ARR on contract is USD 23,906.25 but SF shows USD 22,000")
-- Note any missing data in SF or NS that should be present
+Go through each field below and compare the value extracted from the uploaded document (Section 1) against the SF data and NS data provided in the notes. For each field, state:
+- CONTRACT value (from uploaded document)
+- SF value (from Salesforce notes)
+- NS value (from NetSuite notes)
+- MATCH or MISMATCH
 
-2. KEY RISKS
-List only real, specific risks found in this opportunity. Use this priority order:
-- Overdue balance / collection red flag (name the amount)
-- Missing documents referenced but not uploaded
-- Toxic clauses (price cap, customer termination for convenience) — include clause reference
-- NNR deadline approaching — include specific date
-- ARR/TCV data mismatch between systems
-- Legal case required for first-time non-ESW paper renewal
-DO NOT flag missing auto-renewal as a risk for reseller/partner contracts — this is normal.
-If no risks exist, write "No key risks identified."
+Fields to check in this order:
+a) ARR — contract vs SF Current ARR vs NS ARR
+b) TCV — contract vs SF Current TCV
+c) Start date — contract vs NS Start Date
+d) End date — contract vs NS End Date
+e) Product / Subscription Plan — contract vs NS Subscription Plan
+f) Customer name — contract vs SF Account vs NS Customer Name
+g) Subsidiary / Supplier entity — contract Supplier Details vs NS Subsidiary
+h) Parent Opportunity — is SF Parent Opportunity field populated? If No, flag as missing.
+i) Auto-Renewed Last Term — what does SF show vs what the contract says about auto-renewal?
+j) Contract on ESW 2019+ Terms — does SF field match what the contract supplier address indicates?
+k) Contacts and addresses — do SF and NS billing addresses match the contract customer details?
 
-3. RECOMMENDED NEXT STEPS
-List specific, prioritized, actionable steps for the Sales Ops rep. Reference exact fields, systems, and actions.
-Examples of good next steps:
-- "Update ARR in SF and NS to match contract value of USD X — raise to Stuck Opps tracker"
-- "Send NNR by [date] via [method] to [address]"
-- "Create Legal case — first-time renewal on non-ESW paper"
-- "Escalate overdue balance of $X to VP/Opp owner"
-- "Confirm Parent Opportunity is linked in SF Renewals section"
+For each MISMATCH or missing field, write it on its own line in this format:
+MISMATCH — [Field name]: Contract shows [X], SF shows [Y], NS shows [Z]
+MISSING — [Field name]: [explain what is absent and where it should be]
+
+If a field genuinely cannot be verified because SF or NS data was not provided, write:
+UNVERIFIED — [Field name]: [reason]
+
+2. RECOMMENDED NEXT STEPS
+List specific, prioritized, actionable steps directly tied to the mismatches and gaps found in DATA ALIGNMENT above. Number each step. Reference exact field names, systems, and values.
+- For every ARR/TCV mismatch: "Update [field] in SF and NS to match contract value of [X] — raise to Stuck Opps tracker"
+- For missing Parent Opportunity: "Link Parent Opportunity in SF Renewals section"
+- For address mismatches: "Update billing address in [SF/NS] to match contract: [address]"
+- For overdue balance: "Escalate overdue balance of $X to VP/Opp owner"
+- For NNR required: "Send NNR by [date] via [method] to [address]"
+- For legal case: "Create Legal case — first-time renewal on non-ESW paper"
+If all fields are verified and aligned, write "All checked fields are aligned — no action required."
 
 ---
 
