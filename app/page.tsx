@@ -280,7 +280,7 @@ Renewal Date: ${opp.CloseDate ?? 'Not set'}
 Owner: ${opp['Owner.Name']}
 Opportunity ID: ${opp.Id}
 Current Term: ${r.Current_Term__c ?? 'Not set'}
-Current ARR: ${r.ARR__c ?? (opp.Amount ? '$' + opp.Amount.toLocaleString() : 'Not set')}
+Current ARR: ${r.ARR__c ?? 'Not set'}
 Current TCV: ${r.TCV__c ?? 'Not set'}
 Parent Opportunity: ${parentOppDisplay}
 Auto-Renewed Last Term: ${r.Auto_Renewed_Last_Term__c ?? 'Not set'}
@@ -667,7 +667,7 @@ ${html}
 
             {/* Report body — Section 1 gets PDF, Sections 2 & 3 get Copy to Sheet */}
             {parseSections(report).map((section, i) => {
-              const isSection1 = section.label.startsWith('SECTION 1')
+              const isSection1 = i === 0
               return (
                 <div key={i} className="bg-white rounded-2xl shadow-sm p-6">
                   <div className="flex justify-between items-center mb-3">

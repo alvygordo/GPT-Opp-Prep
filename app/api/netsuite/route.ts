@@ -92,14 +92,15 @@ export async function POST(request: NextRequest) {
           .catch(e => ({ error: e.message })),
         mcpCall(sessionId, 4, 'get_customer_overdue_balance', { customer_id: String(customerId) })
           .catch(e => ({ error: e.message })),
-        mcpCall(sessionId, 5, 'get_customer_subscriptions', { customer_id: String(customerId) })
-          .catch(() => null),
+        (mcpCall(sessionId, 5, 'get_customer_subscriptions', { customer_id: String(customerId) }).catch(() => null)
+          .then(d => d ?? mcpCall(sessionId, 8, 'get_subscriptions', { customer_id: String(customerId) }).catch(() => null))
+          .then(d => d ?? mcpCall(sessionId, 9, 'get_subscription_by_customer', { customer_id: String(customerId) }).catch(() => null))),
       ])
     } else {
-      // Fallback: try subscription lookup by customer name directly
-      subscriptionData = await mcpCall(sessionId, 5, 'get_customer_subscriptions', {
-        customer_name: customerName.trim()
-      }).catch(() => null)
+      // Fallback: try subscription lookup by customer name — try several tool name variants
+      subscriptionData = await mcpCall(sessionId, 5, 'get_customer_subscriptions', { customer_name: customerName.trim() }).catch(() => null)
+        ?? await mcpCall(sessionId, 5, 'get_subscriptions', { customer_name: customerName.trim() }).catch(() => null)
+        ?? await mcpCall(sessionId, 5, 'search_subscriptions', { customer_name: customerName.trim() }).catch(() => null)
 
       // If subscriptions found, extract customer_id and fetch details
       const subList2 = Array.isArray(subscriptionData) ? subscriptionData : subscriptionData?.subscriptions ?? subscriptionData?.data ?? []

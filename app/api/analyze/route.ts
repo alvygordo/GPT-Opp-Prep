@@ -129,9 +129,7 @@ Current ARR mismatch with SQ. [describe mismatch]. Recommend raising to Stuck Op
 
 SECTION 3: SUMMARY AND RECOMMENDATIONS
 
-Write in plain text. No table.
-
-THE UPLOADED CONTRACT/DOCUMENT IS THE SOURCE OF TRUTH. The ARR and TCV values must come directly from the contract document as stated — never calculate or derive them. SF and NS must match the contract. Flag every mismatch.
+Write in plain text. No table. The ARR and TCV values must come directly from the contract document as stated — never calculate or derive them. SF and NS must match the contract. Flag every mismatch.
 
 1. DATA ALIGNMENT
 
