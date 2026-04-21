@@ -73,12 +73,12 @@ export async function POST(request: NextRequest) {
     }).catch(e => ({ error: e.message }))
 
     // Extract customer_id from invoices result if available
-    const customerId = invoicesData?.customer_id
+    let customerId = invoicesData?.customer_id
       ?? invoicesData?.invoices?.[0]?.customer_id
       ?? invoicesData?.[0]?.customer_id
       ?? null
 
-    // Step 2: if we have a customer_id, fetch details + overdue balance + subscriptions in parallel
+    // Step 2: fetch details + overdue + subscriptions in parallel (by customer_id if found)
     let customerData = null
     let overdueData = null
     let subscriptionData = null
@@ -92,14 +92,42 @@ export async function POST(request: NextRequest) {
         mcpCall(sessionId, 5, 'get_customer_subscriptions', { customer_id: String(customerId) })
           .catch(() => null),
       ])
+    } else {
+      // Fallback: try subscription lookup by customer name directly
+      subscriptionData = await mcpCall(sessionId, 5, 'get_customer_subscriptions', {
+        customer_name: customerName.trim()
+      }).catch(() => null)
+
+      // If subscriptions found, extract customer_id and fetch details
+      const subList2 = Array.isArray(subscriptionData) ? subscriptionData : subscriptionData?.subscriptions ?? subscriptionData?.data ?? []
+      const firstSub = subList2[0] ?? subscriptionData
+      const idFromSub = firstSub?.customer_id ?? firstSub?.customerId ?? firstSub?.customer?.id ?? null
+      if (idFromSub) {
+        customerId = String(idFromSub)
+        ;[customerData, overdueData] = await Promise.all([
+          mcpCall(sessionId, 6, 'get_customer_details', { customer_id: customerId })
+            .catch(e => ({ error: e.message })),
+          mcpCall(sessionId, 7, 'get_customer_overdue_balance', { customer_id: customerId })
+            .catch(e => ({ error: e.message })),
+        ])
+      }
     }
 
-    // Extract subscription status from subscription data — try multiple shapes
+    // Normalise subscription list and extract key fields
     const subList = Array.isArray(subscriptionData)
       ? subscriptionData
       : subscriptionData?.subscriptions ?? subscriptionData?.data ?? []
-    const latestSub = subList[0] ?? subscriptionData ?? null
-    const subscriptionStatus = latestSub?.status ?? latestSub?.subscriptionStatus ?? latestSub?.Status ?? null
+    const latestSub: Record<string, unknown> = subList[0] ?? (subscriptionData && !Array.isArray(subscriptionData) ? subscriptionData : null) ?? {}
+
+    const subscriptionStatus = (latestSub?.status ?? latestSub?.subscriptionStatus ?? latestSub?.Status ?? null) as string | null
+    const subscriptionPlan   = (latestSub?.subscriptionPlan ?? latestSub?.subscription_plan ?? latestSub?.planName ?? latestSub?.plan ?? null) as string | null
+    const subsidiary         = (latestSub?.subsidiary ?? latestSub?.subsidiaryName ?? null) as string | null
+    const startDate          = (latestSub?.startDate ?? latestSub?.start_date ?? null) as string | null
+    const endDate            = (latestSub?.endDate ?? latestSub?.end_date ?? null) as string | null
+    const arr                = (latestSub?.arr ?? latestSub?.ARR ?? latestSub?.annualRecurringRevenue ?? null) as string | number | null
+    const reseller           = (latestSub?.reseller ?? latestSub?.resellerName ?? latestSub?.distributor ?? null) as string | null
+    const endUser            = (latestSub?.endUser ?? latestSub?.end_user ?? latestSub?.endUserName ?? null) as string | null
+    const autoRenewal        = (latestSub?.autoRenewal ?? latestSub?.auto_renewal ?? latestSub?.isAutoRenewal ?? null) as boolean | string | null
 
     return NextResponse.json({
       customer: customerData,
@@ -108,6 +136,14 @@ export async function POST(request: NextRequest) {
       customer_id: customerId,
       subscriptions: subscriptionData,
       subscription_status: subscriptionStatus,
+      subscription_plan: subscriptionPlan,
+      subsidiary,
+      start_date: startDate,
+      end_date: endDate,
+      arr,
+      reseller,
+      end_user: endUser,
+      auto_renewal: autoRenewal,
     })
 
   } catch (error) {

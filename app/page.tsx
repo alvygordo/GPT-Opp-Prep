@@ -39,7 +39,75 @@ type NsData = {
   customer_id: string | null
   subscriptions?: unknown
   subscription_status?: string | null
+  subscription_plan?: string | null
+  subsidiary?: string | null
+  start_date?: string | null
+  end_date?: string | null
+  arr?: string | number | null
+  reseller?: string | null
+  end_user?: string | null
+  auto_renewal?: boolean | string | null
   error?: string
+}
+
+function Row({ label, value, highlight }: { label: string; value: string; highlight?: 'green' | 'red' }) {
+  const color = highlight === 'green' ? 'text-green-700 font-semibold' : highlight === 'red' ? 'text-red-600 font-semibold' : 'text-gray-700'
+  return (
+    <div className="flex gap-1">
+      <span className="text-gray-500 shrink-0">{label}:</span>
+      <span className={color}>{value}</span>
+    </div>
+  )
+}
+
+function NsCard({ nsData, nsSearch, onClear }: { nsData: NsData; nsSearch: string; onClear: () => void }) {
+  const latestInv = nsData.invoices?.latest_invoice
+  const invStatus = latestInv ? String(latestInv.status ?? (latestInv as Record<string, unknown>).paymentstatus ?? '') : null
+  const hasOverdue = nsData.overdue && JSON.stringify(nsData.overdue) !== 'null' && JSON.stringify(nsData.overdue) !== '{}'
+  const c = nsData.customer as Record<string, string> | null ?? {}
+  const custName = String(c.companyName ?? c.entityid ?? c.name ?? nsSearch ?? '')
+  const statusVal = nsData.subscription_status || String(c.status ?? c.entityStatus ?? 'Not Found')
+
+  return (
+    <div className="mt-2 rounded-lg px-3 py-3 text-xs space-y-1.5" style={{ backgroundColor: '#eef2ff' }}>
+      <div className="flex items-center justify-between mb-1">
+        <p className="text-sm font-semibold text-gray-800">✓ NetSuite data loaded</p>
+        <button type="button" onClick={onClear} className="text-xs text-gray-400 underline">Clear</button>
+      </div>
+
+      {custName && <Row label="Customer" value={custName} />}
+      {nsData.reseller && <Row label="Reseller" value={nsData.reseller} />}
+      {nsData.end_user && <Row label="End User" value={nsData.end_user} />}
+      {nsData.subscription_plan && <Row label="Subscription Plan" value={nsData.subscription_plan} />}
+      {nsData.subsidiary && <Row label="Subsidiary" value={nsData.subsidiary} />}
+
+      <Row
+        label="Status"
+        value={statusVal}
+        highlight={statusVal.toLowerCase() === 'active' ? 'green' : 'red'}
+      />
+
+      {nsData.arr != null && <Row label="ARR" value={`$${nsData.arr}`} />}
+      {nsData.start_date && <Row label="Start Date" value={nsData.start_date} />}
+      {nsData.end_date && <Row label="End Date" value={nsData.end_date} />}
+      {nsData.auto_renewal != null && <Row label="Auto Renewal" value={String(nsData.auto_renewal)} />}
+
+      <div className="border-t border-indigo-100 pt-1.5 mt-1">
+        <Row
+          label="Last Invoice"
+          value={invStatus || (nsData.invoices?.total === 0 ? 'No invoices found' : 'Not Found')}
+          highlight={invStatus?.toLowerCase().includes('paid') ? 'green' : invStatus ? 'red' : undefined}
+        />
+        <Row
+          label="Collection Flag"
+          value={hasOverdue ? `YES — overdue balance exists` : 'No'}
+          highlight={hasOverdue ? 'red' : 'green'}
+        />
+      </div>
+
+      <p className="text-gray-400 pt-1">NS data added to notes for AI analysis</p>
+    </div>
+  )
 }
 
 export default function Home() {
@@ -154,6 +222,7 @@ export default function Home() {
     const subStatus = (c.subscriptionStatus ?? c.subscription_status ?? c.status ?? c.entityStatus ?? c.custrecord_status ?? '') as string
 
     const nsSubscriptionStatus = data.subscription_status || subStatus || 'Not Found'
+    const hasOverdue = overdue && JSON.stringify(overdue) !== 'null' && JSON.stringify(overdue) !== '{}'
 
     const nsBlock = `
 --- NetSuite Data ---
@@ -161,13 +230,22 @@ NS Customer ID: ${data.customer_id ?? 'Not Found'}
 NS Customer Name: ${((c.companyName ?? c.entityid ?? c.name ?? nsSearch) || 'Not Found') as string}
 NS Customer Status: ${(c.status ?? c.entityStatus ?? 'Not Found') as string}
 NS Subscription Status: ${nsSubscriptionStatus}
+NS Subscription Plan: ${data.subscription_plan ?? 'Not Found'}
+NS Subsidiary: ${data.subsidiary ?? 'Not Found'}
+NS ARR: ${data.arr != null ? `$${data.arr}` : 'Not Found'}
+NS Start Date: ${data.start_date ?? 'Not Found'}
+NS End Date: ${data.end_date ?? 'Not Found'}
+NS Reseller: ${data.reseller ?? 'None'}
+NS End User: ${data.end_user ?? 'Not Found'}
+NS Auto Renewal: ${data.auto_renewal != null ? String(data.auto_renewal) : 'Not Found'}
 NS Billing Address: ${(c.billingAddress ?? c.defaultaddress ?? c.address ?? 'Not Found') as string}
 NS Last Invoice ID: ${invoiceId || 'Not Found'}
 NS Last Invoice Date: ${invoiceDate || 'Not Found'}
 NS Last Invoice Amount: ${invoiceAmount ? `$${invoiceAmount}` : 'Not Found'}
 NS Last Invoice Status: ${invoiceStatus}
 NS Total Invoices Found: ${inv?.total ?? 0}
-NS Overdue Balance: ${JSON.stringify(overdue) !== 'null' && overdue ? JSON.stringify(overdue) : 'None'}
+NS Overdue Balance: ${hasOverdue ? JSON.stringify(overdue) : 'None'}
+NS Collection Flag: ${hasOverdue ? 'YES - OVERDUE BALANCE EXISTS' : 'No'}
 NS RAW Customer Data: ${JSON.stringify(c)}
 NS RAW Invoice Data: ${JSON.stringify(inv)}
 NS RAW Subscription Data: ${JSON.stringify(data.subscriptions)}
@@ -427,36 +505,8 @@ NetSuite Status (SF): ${(opp as any).NetSuite_Status__c ?? 'Not set'}
                 </div>
 
                 {/* NS summary card */}
-                {nsData && (nsData.customer || nsData.invoices) && (
-                  <div className="mt-2 rounded-lg px-3 py-2 text-sm space-y-1" style={{ backgroundColor: '#eef2ff' }}>
-                    <div className="flex items-center justify-between">
-                      <p className="font-medium text-gray-800">✓ NetSuite data loaded</p>
-                      <button
-                        type="button"
-                        onClick={() => { setNsData(null); setNsError(''); setNsSearch('') }}
-                        className="text-xs text-gray-400 underline ml-3"
-                      >
-                        Clear
-                      </button>
-                    </div>
-                    {(nsData.subscription_status || nsData.customer) && (
-                      <p className="text-xs text-gray-600">
-                        NS Status: <span className="font-medium">{nsData.subscription_status || String(nsData.customer?.status ?? nsData.customer?.entityStatus ?? 'Unknown')}</span>
-                      </p>
-                    )}
-                    {nsData.invoices && (
-                      <p className="text-xs text-gray-600">
-                        Invoices: <span className="font-medium">{nsData.invoices.total}</span>
-                        {nsData.invoices.latest_invoice && ` · Last: ${nsData.invoices.latest_invoice.status}`}
-                      </p>
-                    )}
-                    {nsData.overdue && (
-                      <p className="text-xs text-amber-700">
-                        Overdue: {JSON.stringify(nsData.overdue)}
-                      </p>
-                    )}
-                    <p className="text-xs text-gray-400">NS data added to notes for AI analysis</p>
-                  </div>
+                {nsData && !!(nsData.customer || nsData.invoices || nsData.subscription_status || nsData.subscriptions) && (
+                  <NsCard nsData={nsData} nsSearch={nsSearch} onClear={() => { setNsData(null); setNsError(''); setNsSearch('') }} />
                 )}
               </div>
 
