@@ -64,6 +64,44 @@ export default function ReportPage() {
     setTimeout(() => setCopied(false), 2000)
   }
 
+  function downloadSectionPDF(sectionText: string, title: string) {
+    const lines = sectionText.trim().split('\n')
+    let html = ''
+    let inTable = false
+    for (const line of lines) {
+      if (line.includes('\t')) {
+        const cells = line.split('\t')
+        const isHeader = cells[0].trim().toLowerCase() === 'ref' || cells[0].trim() === '#'
+        if (!inTable) { html += '<table>'; inTable = true }
+        const tag = isHeader ? 'th' : 'td'
+        html += `<tr>${cells.map(c => `<${tag}>${c.trim()}</${tag}>`).join('')}</tr>`
+      } else {
+        if (inTable) { html += '</table>'; inTable = false }
+        if (line.trim()) html += `<p>${line.trim()}</p>`
+      }
+    }
+    if (inTable) html += '</table>'
+    const win = window.open('', '_blank')
+    if (!win) return
+    win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8">
+<title>${title}</title>
+<style>
+  body { font-family: Arial, sans-serif; font-size: 11px; margin: 20px; color: #222; }
+  h1 { font-size: 14px; margin-bottom: 16px; color: #2dbda8; }
+  table { border-collapse: collapse; width: 100%; margin-top: 8px; }
+  th, td { border: 1px solid #ccc; padding: 5px 8px; text-align: left; vertical-align: top; }
+  th { background: #f0f4f4; font-weight: bold; }
+  tr:nth-child(even) td { background: #fafafa; }
+  p { margin: 4px 0; }
+  @media print { body { margin: 10mm; } }
+</style></head><body>
+<h1>${title}</h1>
+${html}
+<script>window.onload = function(){ window.print(); }<\/script>
+</body></html>`)
+    win.document.close()
+  }
+
   const customerName = report?.opportunities?.customer_name ?? 'Unknown Customer'
   const date = report ? new Date(report.created_at).toLocaleDateString('en-US', {
     year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
@@ -128,24 +166,37 @@ export default function ReportPage() {
               </div>
             </div>
 
-            {/* Report body — per-section copy buttons */}
-            {parseSections(report.report_output).map((section, i) => (
-              <div key={i} className="bg-white rounded-2xl shadow-sm p-6 mb-4">
-                <div className="flex justify-between items-center mb-3">
-                  <h2 className="text-sm font-bold text-gray-700">{section.label}</h2>
-                  <button
-                    onClick={() => copySection(section.content, section.label)}
-                    className="text-xs text-white px-3 py-1.5 rounded-lg font-medium whitespace-nowrap"
-                    style={{ backgroundColor: copiedSection === section.label ? '#16a34a' : '#2dbda8' }}
-                  >
-                    {copiedSection === section.label ? 'Copied!' : 'Copy Section'}
-                  </button>
+            {/* Report body — Section 1 gets PDF, Sections 2 & 3 get Copy to Sheet */}
+            {parseSections(report.report_output).map((section, i) => {
+              const isSection1 = section.label.startsWith('SECTION 1')
+              return (
+                <div key={i} className="bg-white rounded-2xl shadow-sm p-6 mb-4">
+                  <div className="flex justify-between items-center mb-3">
+                    <h2 className="text-sm font-bold text-gray-700">{section.label}</h2>
+                    {isSection1 ? (
+                      <button
+                        onClick={() => downloadSectionPDF(section.content, `${customerName} — Contract Summary`)}
+                        className="text-xs text-white px-3 py-1.5 rounded-lg font-medium whitespace-nowrap"
+                        style={{ backgroundColor: '#6366f1' }}
+                      >
+                        Download PDF
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => copySection(section.content, section.label)}
+                        className="text-xs text-white px-3 py-1.5 rounded-lg font-medium whitespace-nowrap"
+                        style={{ backgroundColor: copiedSection === section.label ? '#16a34a' : '#2dbda8' }}
+                      >
+                        {copiedSection === section.label ? 'Copied!' : 'Copy to Sheet'}
+                      </button>
+                    )}
+                  </div>
+                  <pre className="whitespace-pre-wrap text-sm text-gray-700 font-mono leading-relaxed overflow-x-auto">
+                    {section.content}
+                  </pre>
                 </div>
-                <pre className="whitespace-pre-wrap text-sm text-gray-700 font-mono leading-relaxed overflow-x-auto">
-                  {section.content}
-                </pre>
-              </div>
-            ))}
+              )
+            })}
           </>
         )}
       </div>

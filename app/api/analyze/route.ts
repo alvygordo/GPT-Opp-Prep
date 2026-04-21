@@ -129,46 +129,68 @@ Current ARR mismatch with SQ. [describe mismatch]. Recommend raising to Stuck Op
 
 SECTION 3: SUMMARY AND RECOMMENDATIONS
 
-Write in plain text. No table. Cover both sub-sections below.
+Write in plain text. No table.
 
-THE UPLOADED CONTRACT/DOCUMENT IS THE SOURCE OF TRUTH. Compare every key field from the document against what SF and NS show. Flag every mismatch, gap, and discrepancy — do not skip any. Never write "No mismatches found" unless you have explicitly verified every field below across all three sources.
+THE UPLOADED CONTRACT/DOCUMENT IS THE SOURCE OF TRUTH. The ARR and TCV values must come directly from the contract document as stated — never calculate or derive them. SF and NS must match the contract. Flag every mismatch.
 
 1. DATA ALIGNMENT
-Go through each field below and compare the value extracted from the uploaded document (Section 1) against the SF data and NS data provided in the notes. For each field, state:
-- CONTRACT value (from uploaded document)
-- SF value (from Salesforce notes)
-- NS value (from NetSuite notes)
-- MATCH or MISMATCH
 
-Fields to check in this order:
-a) ARR — contract vs SF Current ARR vs NS ARR
-b) TCV — contract vs SF Current TCV
-c) Start date — contract vs NS Start Date
-d) End date — contract vs NS End Date
-e) Product / Subscription Plan — contract vs NS Subscription Plan
-f) Customer name — contract vs SF Account vs NS Customer Name
-g) Subsidiary / Supplier entity — contract Supplier Details vs NS Subsidiary
-h) Parent Opportunity — is SF Parent Opportunity field populated? If No, flag as missing.
-i) Auto-Renewed Last Term — what does SF show vs what the contract says about auto-renewal?
-j) Contract on ESW 2019+ Terms — does SF field match what the contract supplier address indicates?
-k) Contacts and addresses — do SF and NS billing addresses match the contract customer details?
+Check ONLY these 5 fields. For each, show CONTRACT / SF CURRENT ARR or SF CURRENT TCV / NS value on separate lines, then state MATCH or MISMATCH.
 
-For each MISMATCH or missing field, write it on its own line in this format:
-MISMATCH — [Field name]: Contract shows [X], SF shows [Y], NS shows [Z]
-MISSING — [Field name]: [explain what is absent and where it should be]
+a) ARR
+- CONTRACT: [ARR as stated in the contract document — do not say "Calculated", use the exact figure from the document]
+- SF CURRENT ARR: [value from "Current ARR" field in Salesforce notes — this is the ARR__c field, NOT the Opportunity Amount]
+- NS ARR: [value from "NS ARR" field in NetSuite notes]
+- [MATCH or MISMATCH — ARR: Contract shows X, SF Current ARR shows Y, NS ARR shows Z]
 
-If a field genuinely cannot be verified because SF or NS data was not provided, write:
-UNVERIFIED — [Field name]: [reason]
+b) TCV
+- CONTRACT: [TCV as stated in the contract document]
+- SF CURRENT TCV: [value from "Current TCV" field in Salesforce notes — this is the TCV__c field]
+- [MATCH or MISMATCH — TCV: Contract shows X, SF Current TCV shows Y]
+
+c) End date
+- CONTRACT: [end date from document]
+- NS End Date: [value from "NS End Date" in NetSuite notes]
+- [MATCH or MISMATCH]
+
+d) Product / Subscription Plan
+- CONTRACT: [product name from document]
+- NS Subscription Plan: [value from "NS Subscription Plan" in NetSuite notes]
+- [MATCH or MISMATCH]
+
+e) Customer name
+- CONTRACT: [customer name from document]
+- SF Account: [Account from Salesforce notes]
+- NS Customer Name: [value from "NS Customer Name" in NetSuite notes]
+- [MATCH or MISMATCH]
+
+Use UNVERIFIED — [field] if the SF or NS value was not provided in the notes (do not guess).
 
 2. RECOMMENDED NEXT STEPS
-List specific, prioritized, actionable steps directly tied to the mismatches and gaps found in DATA ALIGNMENT above. Number each step. Reference exact field names, systems, and values.
-- For every ARR/TCV mismatch: "Update [field] in SF and NS to match contract value of [X] — raise to Stuck Opps tracker"
-- For missing Parent Opportunity: "Link Parent Opportunity in SF Renewals section"
-- For address mismatches: "Update billing address in [SF/NS] to match contract: [address]"
-- For overdue balance: "Escalate overdue balance of $X to VP/Opp owner"
-- For NNR required: "Send NNR by [date] via [method] to [address]"
-- For legal case: "Create Legal case — first-time renewal on non-ESW paper"
-If all fields are verified and aligned, write "All checked fields are aligned — no action required."
+
+First line must be EXACTLY one of these four final outcome labels based on your findings:
+
+OPP PREP COMPLETE: Ready for Engagement
+→ Use ONLY if all 5 DATA ALIGNMENT fields are MATCH and no blocking issues exist.
+
+MISMATCH FOUND — Correct data before proceeding
+→ Use if any DATA ALIGNMENT field shows MISMATCH.
+
+INCOMPLETE — Missing required data or documents
+→ Use if SF or NS data was not provided or key documents are missing.
+
+AT RISK — Review required before proceeding
+→ Use if there is an overdue balance, NNR required, toxic clause, or legal case needed.
+
+If the outcome is NOT "OPP PREP COMPLETE", list numbered action steps tied directly to each flagged item. For each step, state the exact field, system, and value to correct:
+- ARR mismatch: "Update Current ARR in SF and NS ARR in NetSuite to match contract value of [X] — raise to Stuck Opps tracker"
+- TCV mismatch: "Update Current TCV in SF to match contract value of [X] — raise to Stuck Opps tracker"
+- End date mismatch: "Update NS End Date to [X]"
+- Product mismatch: "Update NS Subscription Plan to match contract: [X]"
+- Customer name mismatch: "Correct customer name in [SF/NS] to match contract: [X]"
+- Overdue balance: "Escalate overdue balance of $X to VP/Opp owner"
+- NNR required: "Send NNR by [date] via [method] to [address]"
+- Legal case: "Create Legal case — first-time renewal on non-ESW paper"
 
 ---
 
