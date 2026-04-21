@@ -15,40 +15,44 @@ export async function POST(request: NextRequest) {
       process.env.SALESFORCE_PASSWORD! + process.env.SALESFORCE_TOKEN!
     )
 
-    // Search for opportunity by name — include Renewals section fields
+    const safeName = opportunityName.replace(/'/g, "\\'")
+
+    // Try full query with all custom fields first
     const result = await conn.query(`
       SELECT
         Id, Name, StageName, CloseDate, Amount,
         AccountId, Account.Name,
         Owner.Name, OwnerId,
-        Type, LeadSource, Description,
-        CreatedDate, LastModifiedDate,
-        SBQQ__RenewedContract__c,
+        Description, CreatedDate, LastModifiedDate,
         Parent_Opportunity__c,
         Parent_Opportunity__r.Name,
         Auto_Renewed_Last_Term__c,
         Customer_Termination_Deadline__c,
+        ARR__c, TCV__c,
+        Current_Term__c,
+        Contract_on_ESW_2019_Terms__c,
+        Has_Auto_Renewal_Clause__c,
+        Contract_has_Toxic_Clauses__c,
+        Customer_Termination_Notice_Period__c,
+        NNR_Required__c,
         NS_Subscription_ID__c,
         NS_Parent_Subscription_ID__c,
         NS_Account_ID__c,
-        NetSuite_Status__c,
-        ARR__c,
-        TCV__c
+        NetSuite_Status__c
       FROM Opportunity
-      WHERE Name LIKE '%${opportunityName.replace(/'/g, "\\'")}%'
+      WHERE Name LIKE '%${safeName}%'
       ORDER BY LastModifiedDate DESC
       LIMIT 10
     `).catch(async () => {
-      // Fallback: query with only guaranteed standard fields if custom fields don't exist
+      // Fallback: standard fields only if custom fields don't exist
       return conn.query(`
         SELECT
           Id, Name, StageName, CloseDate, Amount,
           AccountId, Account.Name,
           Owner.Name, OwnerId,
-          Type, Description,
-          CreatedDate, LastModifiedDate
+          Description, CreatedDate, LastModifiedDate
         FROM Opportunity
-        WHERE Name LIKE '%${opportunityName.replace(/'/g, "\\'")}%'
+        WHERE Name LIKE '%${safeName}%'
         ORDER BY LastModifiedDate DESC
         LIMIT 10
       `)

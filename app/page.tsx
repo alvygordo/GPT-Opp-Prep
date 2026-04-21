@@ -271,23 +271,25 @@ NS Overdue Balance: ${overdueDisplay}
       ? `${parentOppName || ''}${parentOppId ? ' (' + parentOppId + ')' : ''}`.trim()
       : 'None'
 
+    const r = opp as any
     setNotes(`--- Salesforce Opportunity Data ---
 Opportunity Name: ${opp.Name}
 Account: ${opp['Account.Name']}
 Stage: ${opp.StageName}
-Close Date: ${opp.CloseDate}
-Amount: ${opp.Amount ? '$' + opp.Amount.toLocaleString() : 'Not set'}
+Renewal Date: ${opp.CloseDate ?? 'Not set'}
 Owner: ${opp['Owner.Name']}
 Opportunity ID: ${opp.Id}
-SF ARR: ${(opp as any).ARR__c ?? 'Not set'}
-SF TCV: ${(opp as any).TCV__c ?? 'Not set'}
-Parent Opportunity (Renewals Section): ${parentOppDisplay}
-Auto-Renewed Last Term: ${(opp as any).Auto_Renewed_Last_Term__c ?? 'Not set'}
-Customer Termination Deadline: ${(opp as any).Customer_Termination_Deadline__c ?? 'Not set'}
-NS Subscription ID: ${(opp as any).NS_Subscription_ID__c ?? 'Not set'}
-NS Parent Subscription ID: ${(opp as any).NS_Parent_Subscription_ID__c ?? 'Not set'}
-NS Account ID: ${(opp as any).NS_Account_ID__c ?? 'Not set'}
-NetSuite Status (SF): ${(opp as any).NetSuite_Status__c ?? 'Not set'}
+Current Term: ${r.Current_Term__c ?? 'Not set'}
+Current ARR: ${r.ARR__c ?? (opp.Amount ? '$' + opp.Amount.toLocaleString() : 'Not set')}
+Current TCV: ${r.TCV__c ?? 'Not set'}
+Parent Opportunity: ${parentOppDisplay}
+Auto-Renewed Last Term: ${r.Auto_Renewed_Last_Term__c ?? 'Not set'}
+Contract on ESW 2019+ Terms?: ${r.Contract_on_ESW_2019_Terms__c ?? 'Not set'}
+Has Auto-Renewal Clause: ${r.Has_Auto_Renewal_Clause__c ?? 'Not set'}
+Contract has Toxic Clauses?: ${r.Contract_has_Toxic_Clauses__c ?? 'Not set'}
+Customer Termination Notice Period: ${r.Customer_Termination_Notice_Period__c ?? 'Not set'}
+Customer Termination Deadline: ${r.Customer_Termination_Deadline__c ?? 'Not set'}
+NNR Required?: ${r.NNR_Required__c ?? 'Not set'}
 ---`)
     // Auto-search NetSuite with the account name
     searchNetsuite(accountName)

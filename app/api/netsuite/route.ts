@@ -51,8 +51,11 @@ async function mcpCall(sessionId: string, id: number, toolName: string, args: Re
   try { layer3 = JSON.parse(layer3text) } catch { return layer3text }
 
   const responseData = (layer3.response as Record<string, unknown>)?.data
-  if (responseData && typeof responseData === 'string') {
-    try { return JSON.parse(responseData) } catch { return responseData }
+  if (responseData !== undefined && responseData !== null) {
+    if (typeof responseData === 'string') {
+      try { return JSON.parse(responseData) } catch { return responseData }
+    }
+    return responseData  // already a parsed object
   }
 
   return layer3
