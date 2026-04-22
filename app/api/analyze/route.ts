@@ -14,11 +14,22 @@ CRITICAL EXTRACTION RULES
 - Read every single page of every uploaded document before writing anything.
 - Use ALL sources: contract text, SF data in notes, NS data in notes.
 - Only write "N/A" if a field genuinely does not apply. Only write "Not specified" if the field applies but is truly absent from all sources.
-- For anything derivable from context (e.g. term length from start/end dates, ARR from TCV/term), calculate it.
+- Only calculate term length from explicit start/end dates.
+- Do NOT calculate ARR, TCV, notice periods, or renewal rights unless the prompt explicitly says to do so.
 - Never leave a field blank.
 - Translate all non-English content to English.
 - Do not speculate — only use facts extractable from the provided sources.
-
+- If a contract field is not explicitly stated in the document, return "Not Found" or "Not specified in this document".
+- Do NOT infer rights or obligations from a referenced master agreement unless that agreement is uploaded and visible.
+- Logic check: if Auto-renewal = Yes, Notice period cannot be N/A. If no explicit notice language exists, set Auto-renewal = No or Not Found based on document text.
+- Do NOT calculate ARR or TCV.
+- Do NOT infer rights from referenced agreements unless those agreements are uploaded and visible.
+- Logic check: if Auto-renewal = Yes, Notice period cannot be N/A. If no notice is found, set Auto-renewal = No or Not Found.
+- Do NOT flag mismatch for:
+  • parent vs affiliate legal entity names
+  • date differences of 1 day or less
+  • product naming differences that may refer to the same subscription
+  
 ---
 
 SECTION 1: CONTRACT SUMMARY
@@ -42,7 +53,7 @@ Rows in this exact order:
 12[TAB]End date of services[TAB]DD-Mon-YYYY
 13[TAB]End date of contract[TAB]DD-Mon-YYYY — note if subject to auto-renewal
 14[TAB]Contract service term in months[TAB]Number only — calculate from start/end dates if not explicitly stated
-15[TAB]ARR (Annual Recurring Revenue)[TAB]Annual value in original contract currency with currency code (e.g. USD 23,906.25) — calculate from TCV/term if needed; note if mismatched with SF or NS
+15[TAB]ARR (Annual Recurring Revenue)[TAB]Use only an explicitly stated annual contract amount. If the contract shows year-by-year pricing, use the current renewal year's annual amount if identifiable; otherwise write "Not explicitly stated". Do NOT average multi-year totals.
 16[TAB]Total contract value[TAB]Total TCV in original contract currency with currency code
 17[TAB]Support level[TAB]e.g. STANDARD SUCCESS, Premier, Gold — check line items and exhibit if not stated in body
 18[TAB]Number of production orgs[TAB]Count of production instances — write "Not specified" if genuinely absent
@@ -130,12 +141,17 @@ Current ARR mismatch with SQ. [describe mismatch]. Recommend raising to Stuck Op
 SECTION 3: SUMMARY AND RECOMMENDATIONS
 
 Write in plain text. No table. The ARR and TCV values must come directly from the contract document as stated — never calculate or derive them. SF and NS must match the contract. Flag every mismatch.
+Do NOT flag mismatch for:
+- parent company vs affiliate legal entity names
+- date differences of 1 day or less
+- product naming differences that may refer to the same subscription unless the documents clearly conflict
 
 1. DATA ALIGNMENT
 
 Check ONLY these 5 fields. For each, show CONTRACT / SF CURRENT ARR or SF CURRENT TCV / NS value on separate lines, then state MATCH or MISMATCH.
 
 a) ARR
+- ARR must use the explicit annual amount from the contract or NS field. Do NOT average multi-year pricing.
 - CONTRACT: [ARR as stated in the contract document — do not say "Calculated", use the exact figure from the document]
 - SF CURRENT ARR: [value from "Current ARR" field in Salesforce notes — this is the ARR__c field, NOT the Opportunity Amount]
 - NS ARR: [value from "NS ARR" field in NetSuite notes]
