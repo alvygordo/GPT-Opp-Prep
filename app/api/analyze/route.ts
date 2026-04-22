@@ -15,21 +15,18 @@ CRITICAL EXTRACTION RULES
 - Use ALL sources: contract text, SF data in notes, NS data in notes.
 - Only write "N/A" if a field genuinely does not apply. Only write "Not specified" if the field applies but is truly absent from all sources.
 - Only calculate term length from explicit start/end dates.
-- Do NOT calculate ARR, TCV, notice periods, or renewal rights unless the prompt explicitly says to do so.
 - Never leave a field blank.
 - Translate all non-English content to English.
 - Do not speculate — only use facts extractable from the provided sources.
-- If a contract field is not explicitly stated in the document, return "Not Found" or "Not specified in this document".
-- Do NOT infer rights or obligations from a referenced master agreement unless that agreement is uploaded and visible.
-- Logic check: if Auto-renewal = Yes, Notice period cannot be N/A. If no explicit notice language exists, set Auto-renewal = No or Not Found based on document text.
 - Do NOT calculate ARR or TCV.
+- Only use explicitly stated values for ARR, TCV, renewal rights, and notice periods.
+- If a field is not explicitly stated, return "Not Found" or "Not specified in this document".
 - Do NOT infer rights from referenced agreements unless those agreements are uploaded and visible.
 - Logic check: if Auto-renewal = Yes, Notice period cannot be N/A. If no notice is found, set Auto-renewal = No or Not Found.
-- Do NOT flag mismatch for:
-  • parent vs affiliate legal entity names
-  • date differences of 1 day or less
-  • product naming differences that may refer to the same subscription
-  
+- Do NOT flag mismatch for parent vs affiliate legal entity names, date differences of 1 day or less, or product naming differences that may refer to the same subscription.
+- If uncertain, return "UNVERIFIED" instead of guessing.
+- These rules override all other instructions. Do not violate them.
+
 ---
 
 SECTION 1: CONTRACT SUMMARY
