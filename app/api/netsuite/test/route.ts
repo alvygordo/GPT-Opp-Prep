@@ -1,13 +1,28 @@
 import { NextResponse } from 'next/server'
 import crypto from 'crypto'
 
-const ACCOUNT_ID = process.env.NS_ACCOUNT_ID!.trim()
-const CONSUMER_KEY = process.env.NS_CONSUMER_KEY!.trim()
-const CONSUMER_SECRET = process.env.NS_CONSUMER_SECRET!.trim()
-const TOKEN_ID = process.env.NS_TOKEN_ID!.trim()
-const TOKEN_SECRET = process.env.NS_TOKEN_SECRET!.trim()
+export async function GET() {const ACCOUNT_ID = process.env.NS_ACCOUNT_ID?.trim()
+const CONSUMER_KEY = process.env.NS_CONSUMER_KEY?.trim()
+const CONSUMER_SECRET = process.env.NS_CONSUMER_SECRET?.trim()
+const TOKEN_ID = process.env.NS_TOKEN_ID?.trim()
+const TOKEN_SECRET = process.env.NS_TOKEN_SECRET?.trim()
 
-function buildAuthHeader(method: string, url: string): string {
+if (!ACCOUNT_ID || !CONSUMER_KEY || !CONSUMER_SECRET || !TOKEN_ID || !TOKEN_SECRET) {
+  return NextResponse.json(
+    { error: 'Missing NetSuite environment variables' },
+    { status: 500 }
+  )
+}
+
+function buildAuthHeader(
+  method: string,
+  url: string,
+  accountId: string,
+  consumerKey: string,
+  consumerSecret: string,
+  tokenId: string,
+  tokenSecret: string
+): string {
   const timestamp = Math.floor(Date.now() / 1000).toString()
   const nonce = crypto.randomBytes(16).toString('hex')
 
@@ -61,7 +76,15 @@ export async function GET() {
 
   // Try simplest possible authenticated request — list 1 customer record
   const testUrl = `https://${ACCOUNT_ID}.suitetalk.api.netsuite.com/services/rest/record/v1/customer?limit=1`
-  const auth = buildAuthHeader('GET', testUrl)
+  const auth = buildAuthHeader(
+  'GET',
+  testUrl,
+  ACCOUNT_ID,
+  CONSUMER_KEY,
+  CONSUMER_SECRET,
+  TOKEN_ID,
+  TOKEN_SECRET
+)
 
   try {
     const res = await fetch(testUrl, {
