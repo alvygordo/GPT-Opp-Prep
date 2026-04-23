@@ -39,6 +39,7 @@ CRITICAL EXTRACTION RULES
 - These rules override all other instructions. Do not violate them.
 - If a value is present in the supplied Salesforce or NetSuite notes, you must use it and must not replace it with Not Found, Not set, or UNVERIFIED.
 - Never repeat instruction text in outputs. Always return extracted values only.
+- When annual pricing is shown in a yearly breakdown (e.g., Year 1, Year 2, Year 3), treat the latest year value as Current ARR and do not return Not Found.
 
 ---
 
@@ -66,7 +67,7 @@ Rows in this exact order:
 12[TAB]End date of services[TAB]DD-Mon-YYYY
 13[TAB]End date of contract[TAB]DD-Mon-YYYY
 14[TAB]Contract service term in months[TAB]Number only
-15[TAB]Current ARR[TAB]Use the current annual contract amount shown in the contract. If the contract shows year-by-year annual pricing, use the latest/current contract year amount shown in the contract. Do not output instruction text. If no annual amount is shown, write Not Found.
+15[TAB]Current ARR[TAB]Use the current annual contract amount shown in the contract. If the contract shows year-by-year annual pricing, use the latest/current annual amount shown in the contract as Current ARR. For this contract, do not return Not Found when annual fees are explicitly listed in itemized pricing or summary of charges.
 16[TAB]Total contract value[TAB]TCV from document
 17[TAB]Support level[TAB]Value or Not specified
 18[TAB]Number of production orgs[TAB]Value or Not specified
@@ -122,7 +123,7 @@ Create quote: [Check Salesforce quote fields only.
 - If Primary Quote and AR Quote are both filled, answer "PQ and ARQ ready".]
 NS status active: [exact NS status]
 AR'd last renewal: [Y or N from SF Auto-Renewed Last Term field]
-Last invoice paid: [Check NetSuite customer dashboard invoice rows first. If the latest invoice row shows Paid In Full, answer Paid in full. If it shows Open, answer Unpaid. If invoice exists but status is not visible, answer UNVERIFIED. Do not answer Not Found when invoice rows are present.]
+Last invoice paid: [Check NetSuite customer dashboard invoice rows first. If the latest invoice row shows Paid In Full, answer Paid in full. If it shows Open, answer Unpaid. If invoice exists but status is not visible, answer UNVERIFIED. Do not answer Not Found when invoice rows are present.If any NetSuite invoice row shows an explicit payment status (e.g., Paid In Full, Open), you must use that value and must not return UNVERIFIED.]
 AR health check - Collection red flag: [No / Yes — include overdue amount if Yes]
 Escalate to VP/Opp Owner?: [Y if overdue balance exists; N if no overdue balance]
 Contract summary created: [leave blank]
@@ -232,6 +233,11 @@ Return ONLY these 2 blocks:
 PDF_REPORT
 SECTION 1: CONTRACT SUMMARY
 [Section 1 only]
+PDF_REPORT
+[Customer Name] — Contract Summary
+Analysis Date: [DD-Mon-YYYY using today's date]
+
+SECTION 1: CONTRACT SUMMARY
 
 COPY_TO_SHEET
 SECTION 2: OPP PREP CHECKLIST
@@ -323,10 +329,19 @@ ${notes || 'None provided'}`
       ]
     })
 
-    const result = response.choices[0]?.message?.content
-    if (!result) throw new Error('No response from OpenAI')
+    const fullResult = response.choices[0]?.message?.content
+if (!fullResult) throw new Error('No response from OpenAI')
 
-    return NextResponse.json({ result })
+const parts = fullResult.split('COPY_TO_SHEET')
+
+const pdfResult = parts[0]?.replace('PDF_REPORT', '').trim() || ''
+const copyToSheetResult = parts[1]?.trim() || ''
+
+return NextResponse.json({
+  result: fullResult,
+  pdfResult,
+  copyToSheetResult
+})
   } catch (error) {
     console.error('API error:', error)
     return NextResponse.json({ error: 'Failed to analyze opportunity' }, { status: 500 })
