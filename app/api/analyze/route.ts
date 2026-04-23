@@ -155,27 +155,29 @@ Do NOT flag mismatch for:
 Check ONLY these 5 fields. For each, show CONTRACT / SF CURRENT ARR or SF CURRENT TCV / NS value on separate lines, then state MATCH or MISMATCH.
 
 a) ARR
-- CONTRACT: [use the current annual contract amount shown in the contract. If year-by-year annual fees are listed, use the latest/current annual amount shown in the contract.]
-- SF CURRENT ARR: [must use Salesforce Current ARR field if present]
-- NS ARR: [must use NetSuite ARR field if present]
-- If any field is present in the source notes, do not output UNVERIFIED or Not Found for that field.
+- CONTRACT: [value from contract]
+- SF CURRENT ARR: [must use Salesforce Current ARR if present in notes or extract from uploaded SF document]
+- NS ARR: [must use NetSuite ARR if present in notes or extract from uploaded NS document]
+- If any of the three values are present in any source, do not return Not Found.
 - [MATCH or MISMATCH — ARR: Contract shows X, SF shows Y, NS shows Z]
 
 b) TCV
 - CONTRACT: [TCV as stated in the contract document]
 - SF CURRENT TCV: [must use Salesforce Current TCV field if present in notes. If present, do not output UNVERIFIED or Not set.]
+- NS TCV: [if available in NS data; otherwise write UNVERIFIED]
 - [MATCH or MISMATCH — TCV: Contract shows X, SF shows Y, NS shows Z if available]
 
 c) End date
-- CONTRACT: [end date from contract]
-- NS End Date: [must use NetSuite subscription End Date if present in notes]
-- If NS End Date is present in notes, do not output Not Found.
-- [MATCH or MISMATCH — End Date: Contract shows X, NS shows Y]
+- CONTRACT: [value from contract]
+- SF End Date: [value from Salesforce if present]
+- NS End Date: [value from NetSuite if present]
+- If any system has the value, do not return Not Found.
+- [MATCH or MISMATCH — End Date: Contract shows X, SF shows Y, NS shows Z]
 
 d) Product / Subscription Plan
-- CONTRACT: [product name from contract]
-- NS Subscription Plan: [must use NetSuite Subscription Plan if present in notes]
-- If NS Subscription Plan is present in notes, do not output Not Found.
+- CONTRACT: [value from contract]
+- NS Subscription Plan: [must extract from NetSuite document if present]
+- If NS data exists in uploaded files, do not return Not Found.
 - [MATCH or MISMATCH — Product: Contract shows X, NS shows Y]
 
 e) Customer name
@@ -203,14 +205,15 @@ AT RISK — Review required before proceeding
 → Use if there is an overdue balance, NNR required, toxic clause, or legal case needed.
 
 If the outcome is NOT "OPP PREP COMPLETE", list numbered action steps tied directly to each flagged item. For each step, state the exact field, system, and value to correct:
-- ARR mismatch: "Update Current ARR in SF and NS ARR in NetSuite to match contract value of [X] — raise to Stuck Opps tracker"
-- TCV mismatch: "Update Current TCV in SF to match contract value of [X] — raise to Stuck Opps tracker"
+- ARR mismatch: Update Current ARR in SF and NS ARR in NetSuite to match contract value of [X] — raise to Stuck Opps tracker: https://docs.google.com/spreadsheets/d/1366B-bl0xHc12yC6bYbLC0woIK_uga6VMoTMYrAO9lo/edit?gid=0#gid=0
+- TCV mismatch: Update Current TCV in Salesforce to match contract value of [X]. No escalation to Stuck Opps tracker required unless additional discrepancies exist.
 - End date mismatch: "Update NS End Date to [X]"
 - Product mismatch: "Update NS Subscription Plan to match contract: [X]"
 - Customer name mismatch: "Correct customer name in [SF/NS] to match contract: [X]"
 - Overdue balance: "Escalate overdue balance of $X to VP/Opp owner"
 - NNR required: "Send NNR by [date] via [method] to [address]"
 - Legal case: "Create Legal case — first-time renewal on non-ESW paper"
+- Any mismatch involving NetSuite data must be escalated to O2C for correction.
 
 ---
 
@@ -273,9 +276,12 @@ export async function POST(request: NextRequest) {
     }
 
     const dateToUse = currentDate || new Date().toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' })
-    const nameToUse = sfUserName || 'Sales Ops'
+const nameToUse = sfUserName || 'Sales Ops'
 
-    const contentBlocks: OpenAI.Chat.ChatCompletionContentPart[] = []
+// ✅ ADD THIS LINE
+console.log('NOTES SENT TO AI:', notes)
+
+const contentBlocks: OpenAI.Chat.ChatCompletionContentPart[] = []
 
     // Add text context
     contentBlocks.push({
