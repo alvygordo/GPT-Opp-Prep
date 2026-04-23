@@ -70,7 +70,7 @@ function NsCard({ nsData, nsSearch, onClear }: { nsData: NsData; nsSearch: strin
   const hasOverdue = overdueAmt > 0
   const c = nsData.customer as Record<string, string> | null ?? {}
   const custName = String(c.companyName ?? c.entityid ?? c.name ?? nsSearch ?? '')
-  const statusVal = nsData.subscription_status || String(c.status ?? c.entityStatus ?? 'Not Found')
+  const statusVal = nsData.subscription_status || String(c.status ?? c.entityStatus ?? '')
 
   return (
     <div className="mt-2 rounded-lg px-3 py-3 text-xs space-y-1.5" style={{ backgroundColor: '#eef2ff' }}>
@@ -99,7 +99,7 @@ function NsCard({ nsData, nsSearch, onClear }: { nsData: NsData; nsSearch: strin
       <div className="border-t border-indigo-100 pt-1.5 mt-1">
         <Row
           label="Last Invoice"
-          value={invStatus || (nsData.invoices?.total === 0 ? 'No invoices found' : 'Not Found')}
+          value={invStatus || (nsData.invoices?.total === 0 ? 'No invoices found' : '')}
           highlight={invStatus?.toLowerCase().includes('paid') ? 'green' : invStatus ? 'red' : undefined}
         />
         <Row
@@ -217,7 +217,7 @@ export default function Home() {
     const latestInv = inv?.latest_invoice
     const invoiceStatus = latestInv
       ? (latestInv.status ?? latestInv.paymentstatus ?? latestInv.payment_status ?? 'Unknown')
-      : 'Not Found'
+      : ''
     const invoiceAmount = latestInv ? (latestInv.amount ?? latestInv.total ?? '') : ''
     const invoiceId = latestInv ? (latestInv.tranid ?? latestInv.invoice_id ?? latestInv.id ?? '') : ''
     const invoiceDate = latestInv ? (latestInv.date ?? latestInv.trandate ?? '') : ''
@@ -225,7 +225,7 @@ export default function Home() {
     // Subscription status — try multiple field name patterns
     const subStatus = (c.subscriptionStatus ?? c.subscription_status ?? c.status ?? c.entityStatus ?? c.custrecord_status ?? '') as string
 
-    const nsSubscriptionStatus = data.subscription_status || subStatus || 'Not Found'
+    const nsSubscriptionStatus = data.subscription_status || subStatus || ''
 
     // Parse overdue balance value — check actual number, not just object existence
     const overdueRaw = overdue as Record<string, unknown> | null
@@ -236,20 +236,20 @@ export default function Home() {
 
     const nsBlock = `
 --- NetSuite Data ---
-NS Customer Name: ${((c.companyName ?? c.entityid ?? c.name ?? nsSearch) || 'Not Found') as string}
-NS Customer Status: ${(c.status ?? c.entityStatus ?? 'Not Found') as string}
+NS Customer Name: ${((c.companyName ?? c.entityid ?? c.name ?? nsSearch) || '') as string}
+NS Customer Status: ${(c.status ?? c.entityStatus ?? '') as string}
 NS Subscription Status: ${nsSubscriptionStatus}
-NS Subscription Plan: ${data.subscription_plan ?? 'Not Found'}
-NS Subsidiary: ${data.subsidiary ?? 'Not Found'}
-NS ARR: ${data.arr != null ? `$${data.arr}` : 'Not Found'}
-NS Start Date: ${data.start_date ?? 'Not Found'}
-NS End Date: ${data.end_date ?? 'Not Found'}
+NS Subscription Plan: ${data.subscription_plan ?? ''}
+NS Subsidiary: ${data.subsidiary ?? ''}
+NS ARR: ${data.arr != null ? `$${data.arr}` : ''}
+NS Start Date: ${data.start_date ?? ''}
+NS End Date: ${data.end_date ?? ''}
 NS Reseller: ${data.reseller ?? 'None'}
-NS End User: ${data.end_user ?? 'Not Found'}
-NS Billing Address: ${(c.billingAddress ?? c.defaultaddress ?? c.address ?? 'Not Found') as string}
-NS Last Invoice ID: ${invoiceId || 'Not Found'}
-NS Last Invoice Date: ${invoiceDate || 'Not Found'}
-NS Last Invoice Amount: ${invoiceAmount ? `$${invoiceAmount}` : 'Not Found'}
+NS End User: ${data.end_user ?? ''}
+NS Billing Address: ${(c.billingAddress ?? c.defaultaddress ?? c.address ?? '') as string}
+NS Last Invoice ID: ${invoiceId || ''}
+NS Last Invoice Date: ${invoiceDate || ''}
+NS Last Invoice Amount: ${invoiceAmount ? `$${invoiceAmount}` : ''}
 NS Total Invoices Found: ${inv?.total ?? 0}
 NS Overdue Balance: ${overdueDisplay}
 ---`
@@ -276,20 +276,20 @@ NS Overdue Balance: ${overdueDisplay}
 Opportunity Name: ${opp.Name}
 Account: ${opp['Account.Name']}
 Stage: ${opp.StageName}
-Renewal Date: ${opp.CloseDate ?? 'Not set'}
+Renewal Date: ${opp.CloseDate ?? ''}
 Owner: ${opp['Owner.Name']}
 Opportunity ID: ${opp.Id}
-Current Term: ${r.Current_Term__c ?? 'Not set'}
-Current ARR: ${r.ARR__c ?? 'Not set'}
-Current TCV: ${r.TCV__c ?? 'Not set'}
+Current Term: ${r.Current_Term__c ?? ''}
+Current ARR: ${r.ARR__c ?? ''}
+Current TCV: ${r.TCV__c ?? ''}
 Parent Opportunity: ${parentOppDisplay}
-Auto-Renewed Last Term: ${r.Auto_Renewed_Last_Term__c ?? 'Not set'}
-Contract on ESW 2019+ Terms?: ${r.Contract_on_ESW_2019_Terms__c ?? 'Not set'}
-Has Auto-Renewal Clause: ${r.Has_Auto_Renewal_Clause__c ?? 'Not set'}
-Contract has Toxic Clauses?: ${r.Contract_has_Toxic_Clauses__c ?? 'Not set'}
-Customer Termination Notice Period: ${r.Customer_Termination_Notice_Period__c ?? 'Not set'}
-Customer Termination Deadline: ${r.Customer_Termination_Deadline__c ?? 'Not set'}
-NNR Required?: ${r.NNR_Required__c ?? 'Not set'}
+Auto-Renewed Last Term: ${r.Auto_Renewed_Last_Term__c ?? ''}
+Contract on ESW 2019+ Terms?: ${r.Contract_on_ESW_2019_Terms__c ?? ''}
+Has Auto-Renewal Clause: ${r.Has_Auto_Renewal_Clause__c ?? ''}
+Contract has Toxic Clauses?: ${r.Contract_has_Toxic_Clauses__c ?? ''}
+Customer Termination Notice Period: ${r.Customer_Termination_Notice_Period__c ?? ''}
+Customer Termination Deadline: ${r.Customer_Termination_Deadline__c ?? ''}
+NNR Required?: ${r.NNR_Required__c ?? ''}
 ---`)
     // Auto-search NetSuite with the account name
     searchNetsuite(accountName)
