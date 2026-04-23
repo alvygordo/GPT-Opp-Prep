@@ -40,6 +40,9 @@ CRITICAL EXTRACTION RULES
 - If a value is present in the supplied Salesforce or NetSuite notes, you must use it and must not replace it with Not Found, Not set, or UNVERIFIED.
 - Never repeat instruction text in outputs. Always return extracted values only.
 - When annual pricing is shown in a yearly breakdown (e.g., Year 1, Year 2, Year 3), treat the latest year value as Current ARR and do not return Not Found.
+- If a field is blank in the notes, treat it as "not provided" and attempt to extract it from uploaded documents.
+- Do NOT treat blank values as Not Found.
+- Do NOT mark mismatch when a system value is missing. Use UNVERIFIED instead.
 
 ---
 
@@ -110,18 +113,15 @@ Auto-renewal: [Yes or No — if Yes: "Yes — Page X, Clause Y"; if No: "No"]
 Notice period: [X days — Page X, Clause Y; or "N/A — no auto-renewal clause"]
 Price cap: [state cap % and cite location, or "No cap — Page X, Clause Y", or "N/A — no auto-renewal clause"]
 NetSuite IDs validated: [Use NS Subscription Status if present. If not, use NS Customer Status. Return exact value (e.g., CUSTOMER-Active, Active, Closed). Do not return Not Found if any status exists in NS data.]
-Current ARR: [use Salesforce Current ARR first. If Salesforce Current ARR is present, output that value. If it is missing, write Not Found. Do not use contract ARR for this checklist line.]
-Current TCV: [use Salesforce Current TCV field. If present, output that value. If missing, write Not Found. Do not use contract TCV for this checklist line.]
+Current ARR: [Use Salesforce Current ARR if present in notes. If blank in notes, attempt to extract from uploaded Salesforce screenshots or contract documents. If still not available, return UNVERIFIED. Do NOT return Not Found.]
+Current TCV: [Use Salesforce Current TCV if present in notes. If blank in notes, attempt to extract from uploaded Salesforce screenshots or contract documents. If still not available, return UNVERIFIED. Do NOT return Not Found.]
 Parent opp checked: [Look for "Parent Opportunity (Renewals Section)" in the SF data. If the value is anything other than "None" or "Not set", answer Y and include the opp name. If it is None or Not set, answer N.]
 Co-term: [Answer Y ONLY if there is an explicit Upsell or Upgrade opportunity visible in the SF data provided. If no such opp is present in the SF data, answer N. Never assume or speculate about co-terming.]
 Contacts and addresses updated: [Y if SF, NS, and contract customer details align at company level; N if clearly different entities or locations]
-Create quote: [Use Salesforce quote fields only.
-- If Primary Quote field is populated, do NOT answer Create Primary Quote.
-- If Primary Quote field is blank, answer "Create Primary Quote".
-- If Primary Quote field is populated and Auto-renewal is No, answer "PQ ready".
-- If Auto-renewal is Yes, check AR Quote.
-- If Primary Quote is populated and AR Quote is blank, answer "Create AR Quote".
-- If Primary Quote and AR Quote are both populated, answer "PQ and ARQ ready".]
+Create quote: [Use Salesforce Primary Quote field as source of truth.
+- If Primary Quote is present → "PQ ready"
+- If Primary Quote is blank → "Create Primary Quote"
+- Do not infer from other data]
 NS status active: [exact NS status]
 AR'd last renewal: [Use Salesforce Auto-Renewed Last Term field only. If true, answer Y. If false, answer N. If field is blank, answer UNVERIFIED. Do not answer N/A.]
 Last invoice paid: [Use the latest visible NetSuite invoice row first. If that row shows Paid In Full, answer Paid in full. If it shows Open, answer Unpaid. Do not infer from overdue balance alone.]
@@ -129,7 +129,7 @@ AR health check - Collection red flag: [No / Yes — include overdue amount if Y
 Escalate to VP/Opp Owner?: [Y if overdue balance exists; N if no overdue balance]
 Contract summary created: [leave blank]
 Contract on standard paper? [Answer Y only if the supplier address exactly matches "2028 E BEN WHITE BLVD STE 240-2650 AUSTIN TX 78741". Otherwise answer N. Do not infer standard paper from contract type or Khoros name alone.]
-If not, is NNR required? [Y if toxic clause (price cap or customer termination for convenience) exists; "Not required" if no toxic clause; N/A if standard ESW paper]
+If not, is NNR required? [Answer Y only if toxic clauses are identified. If no toxic clauses are identified, answer "Not required".]
 Termination deadline: [MMM DD YYYY format — from SF "Customer Termination Deadline" field; or compute from contract end date + notice period; write "N/A" if no auto-renewal]
 NNR needs to be sent by: [15 days before termination deadline in MMM DD YYYY format; write "Not required" if NNR not needed]
 Method of sending NNR: [email / courier / certified mail — from contract notice clause; write "Not required" if NNR not needed]
@@ -156,30 +156,31 @@ Do NOT flag mismatch for:
 Check ONLY these 5 fields. For each, show CONTRACT / SF CURRENT ARR or SF CURRENT TCV / NS value on separate lines, then state MATCH or MISMATCH.
 
 a) ARR
-- CONTRACT: [value from contract]
-- SF CURRENT ARR: [must use Salesforce Current ARR if present in notes or extract from uploaded SF document]
-- NS ARR: [must use NetSuite ARR if present in notes or extract from uploaded NS document]
-- If any of the three values are present in any source, do not return Not Found.
-- [MATCH or MISMATCH — ARR: Contract shows X, SF shows Y, NS shows Z]
+- CONTRACT: [value]
+- SF CURRENT ARR: [value or UNVERIFIED]
+- NS ARR: [value or UNVERIFIED]
+- If any value is missing, output UNVERIFIED — ARR.
+- Only output MISMATCH if all values are present and clearly conflict.
 
 b) TCV
-- CONTRACT: [TCV as stated in the contract document]
-- SF CURRENT TCV: [must use Salesforce Current TCV field if present in notes. If present, do not output UNVERIFIED or Not set.]
-- NS TCV: [if available in NS data; otherwise write UNVERIFIED]
-- [MATCH or MISMATCH — TCV: Contract shows X, SF shows Y, NS shows Z if available]
+- CONTRACT: [value]
+- SF CURRENT TCV: [value or UNVERIFIED]
+- NS TCV: [value or UNVERIFIED]
+- If any value is missing, output UNVERIFIED — TCV.
+- Only output MISMATCH if all values are present and clearly conflict.
 
 c) End date
-- CONTRACT: [value from contract]
-- SF End Date: [use Salesforce contract/service term end date if explicitly available. Do not use opportunity close date or renewal date as contract end date.]
-- NS End Date: [value from NetSuite if present]
-- If Salesforce has no true contract/service end-date field, output UNVERIFIED for SF End Date.
-- [MATCH or MISMATCH — End Date: Contract shows X, SF shows Y, NS shows Z]
+- CONTRACT: [value]
+- SF End Date: [value or UNVERIFIED]
+- NS End Date: [value or UNVERIFIED]
+- If any value is missing, output UNVERIFIED — End Date.
+- Only output MISMATCH if all values are present and clearly conflict.
 
 d) Product / Subscription Plan
-- CONTRACT: [value from contract]
-- NS Subscription Plan: [must extract from NetSuite document if present]
-- If NS data exists in uploaded files, do not return Not Found.
-- [MATCH or MISMATCH — Product: Contract shows X, NS shows Y]
+- CONTRACT: [value]
+- NS Subscription Plan: [value or UNVERIFIED]
+- If NS value is missing, output UNVERIFIED — Product.
+- Only output MISMATCH if both values are present and clearly conflict.
 
 e) Customer name
 - CONTRACT: [customer name from document]
