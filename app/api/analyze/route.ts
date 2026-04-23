@@ -104,7 +104,7 @@ Select HVO (ARR > $80,000 USD) or Non-HVO (ARR ≤ $80,000 USD) based on the con
 [HVO or Non-HVO] Opp Prep task completed. Results:
 SDR/Opportunity Owner: [answer]
 Documents Present: [List the actual uploaded documents by name or type based on the files provided. Do not generalize.]
-Product family: [answer]
+Product family: [Use the full product family name from the contract or Salesforce data. Do not shorten or generalize. Example: Khoros Community Platform.]
 Partner: [Answer Y only if a reseller/partner is explicitly identified. Check in this order: (1) Salesforce Partner field, (2) NetSuite Reseller field, (3) contract structure showing reseller/bill-to different from end user/ship-to. If found, answer Y and include the partner/reseller name if available. Otherwise answer N. Do not assume based on unclear data.]
 Auto-renewal: [Yes or No — if Yes: "Yes — Page X, Clause Y"; if No: "No"]
 Notice period: [X days — Page X, Clause Y; or "N/A — no auto-renewal clause"]
@@ -115,19 +115,20 @@ Current TCV: [use Salesforce Current TCV field. If present, output that value. I
 Parent opp checked: [Look for "Parent Opportunity (Renewals Section)" in the SF data. If the value is anything other than "None" or "Not set", answer Y and include the opp name. If it is None or Not set, answer N.]
 Co-term: [Answer Y ONLY if there is an explicit Upsell or Upgrade opportunity visible in the SF data provided. If no such opp is present in the SF data, answer N. Never assume or speculate about co-terming.]
 Contacts and addresses updated: [Y if SF, NS, and contract customer details align at company level; N if clearly different entities or locations]
-Create quote: [Check Salesforce quote fields only.
+Create quote: [Use Salesforce quote fields only.
+- If Primary Quote field is populated, do NOT answer Create Primary Quote.
 - If Primary Quote field is blank, answer "Create Primary Quote".
-- If Primary Quote field is filled and Auto-renewal is No, answer "PQ ready".
-- If Auto-renewal is Yes, also check AR Quote.
-- If Primary Quote is filled and AR Quote is blank, answer "Create AR Quote".
-- If Primary Quote and AR Quote are both filled, answer "PQ and ARQ ready".]
+- If Primary Quote field is populated and Auto-renewal is No, answer "PQ ready".
+- If Auto-renewal is Yes, check AR Quote.
+- If Primary Quote is populated and AR Quote is blank, answer "Create AR Quote".
+- If Primary Quote and AR Quote are both populated, answer "PQ and ARQ ready".]
 NS status active: [exact NS status]
-AR'd last renewal: [Y or N from SF Auto-Renewed Last Term field]
-Last invoice paid: [Check NetSuite customer dashboard invoice rows first. If the latest invoice row shows Paid In Full, answer Paid in full. If it shows Open, answer Unpaid. If invoice exists but status is not visible, answer UNVERIFIED. Do not answer Not Found when invoice rows are present.If any NetSuite invoice row shows an explicit payment status (e.g., Paid In Full, Open), you must use that value and must not return UNVERIFIED.]
+AR'd last renewal: [Use Salesforce Auto-Renewed Last Term field only. If true, answer Y. If false, answer N. If field is blank, answer UNVERIFIED. Do not answer N/A.]
+Last invoice paid: [Use the latest visible NetSuite invoice row first. If that row shows Paid In Full, answer Paid in full. If it shows Open, answer Unpaid. Do not infer from overdue balance alone.]
 AR health check - Collection red flag: [No / Yes — include overdue amount if Yes]
 Escalate to VP/Opp Owner?: [Y if overdue balance exists; N if no overdue balance]
 Contract summary created: [leave blank]
-Contract on standard paper? [Y if supplier address is "2028 E BEN WHITE BLVD STE 240-2650 AUSTIN TX 78741"; N otherwise]
+Contract on standard paper? [Answer Y only if the supplier address exactly matches "2028 E BEN WHITE BLVD STE 240-2650 AUSTIN TX 78741". Otherwise answer N. Do not infer standard paper from contract type or Khoros name alone.]
 If not, is NNR required? [Y if toxic clause (price cap or customer termination for convenience) exists; "Not required" if no toxic clause; N/A if standard ESW paper]
 Termination deadline: [MMM DD YYYY format — from SF "Customer Termination Deadline" field; or compute from contract end date + notice period; write "N/A" if no auto-renewal]
 NNR needs to be sent by: [15 days before termination deadline in MMM DD YYYY format; write "Not required" if NNR not needed]
@@ -169,9 +170,9 @@ b) TCV
 
 c) End date
 - CONTRACT: [value from contract]
-- SF End Date: [value from Salesforce if present]
+- SF End Date: [use Salesforce contract/service term end date if explicitly available. Do not use opportunity close date or renewal date as contract end date.]
 - NS End Date: [value from NetSuite if present]
-- If any system has the value, do not return Not Found.
+- If Salesforce has no true contract/service end-date field, output UNVERIFIED for SF End Date.
 - [MATCH or MISMATCH — End Date: Contract shows X, SF shows Y, NS shows Z]
 
 d) Product / Subscription Plan
@@ -184,7 +185,7 @@ e) Customer name
 - CONTRACT: [customer name from document]
 - SF Account: [Account from Salesforce notes]
 - NS Customer Name: [value from "NS Customer Name" in NetSuite notes]
-- [MATCH or MISMATCH — treat parent vs affiliate legal entity differences as MATCH if the relationship is explicitly stated in the contract or notes]
+- [If the contract or notes explicitly state that one entity is an affiliate or parent of the other, output MATCH. Otherwise output MISMATCH.]
 
 Use UNVERIFIED — [field] if the SF or NS value was not provided in the notes (do not guess).
 
@@ -205,7 +206,7 @@ AT RISK — Review required before proceeding
 → Use if there is an overdue balance, NNR required, toxic clause, or legal case needed.
 
 If the outcome is NOT "OPP PREP COMPLETE", list numbered action steps tied directly to each flagged item. For each step, state the exact field, system, and value to correct:
-- ARR mismatch: Update Current ARR in SF and NS ARR in NetSuite to match contract value of [X] — raise to Stuck Opps tracker: https://docs.google.com/spreadsheets/d/1366B-bl0xHc12yC6bYbLC0woIK_uga6VMoTMYrAO9lo/edit?gid=0#gid=0
+- ARR mismatch: Update Current ARR in SF and NS ARR in NetSuite to match contract value of [X] — raise to Stuck Opps/O2C 
 - TCV mismatch: Update Current TCV in Salesforce to match contract value of [X]. No escalation to Stuck Opps tracker required unless additional discrepancies exist.
 - End date mismatch: "Update NS End Date to [X]"
 - Product mismatch: "Update NS Subscription Plan to match contract: [X]"
