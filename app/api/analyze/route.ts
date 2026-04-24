@@ -25,24 +25,29 @@ CRITICAL EXTRACTION RULES
 - Use ALL sources: contract text, SF data in notes, NS data in notes.
 - Only write "N/A" if a field genuinely does not apply. Only write "Not specified" if the field applies but is truly absent from all sources.
 - Only calculate term length from explicit start/end dates.
-- Never leave a field blank.
+- Never leave a field blank in the final output. If missing, return UNVERIFIED or Not specified in this document as appropriate.
 - Translate all non-English content to English.
 - Do not speculate — only use facts extractable from the provided sources.
 - Do NOT calculate ARR or TCV.
 - Only use explicitly stated values for ARR, TCV, renewal rights, and notice periods.
-- If a field is not explicitly stated, return "Not Found" or "Not specified in this document".
+- If a contract field is not explicitly stated, return "Not specified in this document".
+- For Salesforce or NetSuite fields, if missing, return UNVERIFIED (do NOT return Not Found).
 - Do NOT infer rights from referenced agreements unless those agreements are uploaded and visible.
 - Logic check: if Auto-renewal = Yes, Notice period cannot be N/A. If no notice is found, set Auto-renewal = No or Not Found.
 - Do NOT flag mismatch for parent vs affiliate legal entity names, date differences of 1 day or less, or product naming differences that may refer to the same subscription.
 - If uncertain, return "UNVERIFIED" instead of guessing.
 - Do not use markdown formatting, headings, or code blocks anywhere in the output.
 - These rules override all other instructions. Do not violate them.
-- If a value is present in the supplied Salesforce or NetSuite notes, you must use it and must not replace it with Not Found, Not set, or UNVERIFIED.
+- If a value is NOT present in Salesforce or NetSuite notes, you must extract it from uploaded documents.
+- Do NOT return Not Found for missing system values.
 - Never repeat instruction text in outputs. Always return extracted values only.
 - When annual pricing is shown in a yearly breakdown (e.g., Year 1, Year 2, Year 3), treat the latest year value as Current ARR and do not return Not Found.
 - If a field is blank in the notes, treat it as "not provided" and attempt to extract it from uploaded documents.
 - Do NOT treat blank values as Not Found.
 - Do NOT mark mismatch when a system value is missing. Use UNVERIFIED instead.
+- Salesforce and NetSuite snapshot data is limited and may not include ARR, TCV, End Date, or Product details.
+- These values must be extracted from uploaded documents when not present in notes.
+- Do NOT assume missing values from SF/NS as Not Found.
 
 ---
 
@@ -113,8 +118,8 @@ Auto-renewal: [Yes or No — if Yes: "Yes — Page X, Clause Y"; if No: "No"]
 Notice period: [X days — Page X, Clause Y; or "N/A — no auto-renewal clause"]
 Price cap: [state cap % and cite location, or "No cap — Page X, Clause Y", or "N/A — no auto-renewal clause"]
 NetSuite IDs validated: [Use NS Subscription Status if present. If not, use NS Customer Status. Return exact value (e.g., CUSTOMER-Active, Active, Closed). Do not return Not Found if any status exists in NS data.]
-Current ARR: [Use Salesforce Current ARR if present in notes. If blank in notes, attempt to extract from uploaded Salesforce screenshots or contract documents. If still not available, return UNVERIFIED. Do NOT return Not Found.]
-Current TCV: [Use Salesforce Current TCV if present in notes. If blank in notes, attempt to extract from uploaded Salesforce screenshots or contract documents. If still not available, return UNVERIFIED. Do NOT return Not Found.]
+Current ARR: [Extract from contract or uploaded documents if not present in notes. If not found, return UNVERIFIED.]
+Current TCV: [Extract from contract or uploaded documents if not present in notes. If not found, return UNVERIFIED.]
 Parent opp checked: [Look for "Parent Opportunity (Renewals Section)" in the SF data. If the value is anything other than "None" or "Not set", answer Y and include the opp name. If it is None or Not set, answer N.]
 Co-term: [Answer Y ONLY if there is an explicit Upsell or Upgrade opportunity visible in the SF data provided. If no such opp is present in the SF data, answer N. Never assume or speculate about co-terming.]
 Contacts and addresses updated: [Y if SF, NS, and contract customer details align at company level; N if clearly different entities or locations]
@@ -145,7 +150,10 @@ Current ARR mismatch with SQ. [describe mismatch]. Recommend raising to Stuck Op
 
 SECTION 3: SUMMARY AND RECOMMENDATIONS
 
-Write in plain text. No table. The ARR and TCV values must come directly from the contract document as stated — never calculate or derive them. SF and NS should align with the contract. If they do not, flag as mismatch.
+Write in plain text. No table. The ARR and TCV values must come directly from the contract document as stated — never calculate or derive them. 
+SF and NS should align with the contract when values are available.
+If any system value is missing, use UNVERIFIED instead of MISMATCH.
+Only flag MISMATCH when all values are present and clearly conflict.
 Do NOT flag mismatch for:
 - parent company vs affiliate legal entity names
 - date differences of 1 day or less
@@ -236,13 +244,11 @@ FINAL OUTPUT — STRICT
 Return ONLY these 2 blocks:
 
 PDF_REPORT
-SECTION 1: CONTRACT SUMMARY
-[Section 1 only]
-PDF_REPORT
 [Customer Name] — Contract Summary
 Analysis Date: [DD-Mon-YYYY using today's date]
 
 SECTION 1: CONTRACT SUMMARY
+[Section 1 only]
 
 COPY_TO_SHEET
 SECTION 2: OPP PREP CHECKLIST
@@ -255,6 +261,9 @@ RULES:
 
 - PDF_REPORT must contain ONLY Section 1
 - COPY_TO_SHEET must contain ONLY Section 2 and Section 3
+- Do NOT repeat section headers
+- Do NOT include COPY_TO_SHEET inside PDF_REPORT
+- Do NOT include PDF_REPORT label inside COPY_TO_SHEET
 - Do NOT use markdown
 - Do NOT use code blocks
 - Do NOT add explanations or extra text
