@@ -33,7 +33,7 @@ CRITICAL EXTRACTION RULES
 - If a contract field is not explicitly stated, return "Not specified in this document".
 - For Salesforce or NetSuite fields, if missing, return UNVERIFIED (do NOT return Not Found).
 - Do NOT infer rights from referenced agreements unless those agreements are uploaded and visible.
-- Logic check: if Auto-renewal = Yes, Notice period cannot be N/A. If no notice is found, set Auto-renewal = No or Not Found.
+- If Auto-renewal = Yes, Notice period cannot be N/A. If no notice is found, set Auto-renewal = No or UNVERIFIED.
 - Do NOT flag mismatch for parent vs affiliate legal entity names, date differences of 1 day or less, or product naming differences that may refer to the same subscription.
 - If uncertain, return "UNVERIFIED" instead of guessing.
 - Do not use markdown formatting, headings, or code blocks anywhere in the output.
@@ -128,8 +128,8 @@ Create quote: [Use Salesforce Primary Quote field as source of truth.
 - If Primary Quote is blank → "Create Primary Quote"
 - Do not infer from other data]
 NS status active: [exact NS status]
-AR'd last renewal: [Use Salesforce Auto-Renewed Last Term field only. If true, answer Y. If false, answer N. If field is blank, answer UNVERIFIED. Do not answer N/A.]
-Last invoice paid: [Use the latest visible NetSuite invoice row first. If that row shows Paid In Full, answer Paid in full. If it shows Open, answer Unpaid. Do not infer from overdue balance alone.]
+AR'd last renewal: [Use Salesforce Auto-Renewed Last Term field only. If true, answer Y. If false, answer N. If field is blank, answer N. Do not answer UNVERIFIED or N/A.]
+Last invoice paid: [Use the latest visible NetSuite invoice row ONLY if explicitly provided in the notes or uploaded documents. If invoice status is not explicitly available, return UNVERIFIED. Do NOT infer from overdue balance.]
 AR health check - Collection red flag: [No / Yes — include overdue amount if Yes]
 Escalate to VP/Opp Owner?: [Y if overdue balance exists; N if no overdue balance]
 Contract summary created: [leave blank]
@@ -138,10 +138,9 @@ If not, is NNR required? [Answer Y only if toxic clauses are identified. If no t
 Termination deadline: [MMM DD YYYY format — from SF "Customer Termination Deadline" field; or compute from contract end date + notice period; write "N/A" if no auto-renewal]
 NNR needs to be sent by: [15 days before termination deadline in MMM DD YYYY format; write "Not required" if NNR not needed]
 Method of sending NNR: [email / courier / certified mail — from contract notice clause; write "Not required" if NNR not needed]
-NNR Requested: [N/A if NNR not required; otherwise leave blank]
-NNR Sending task created: [N/A if NNR not required; otherwise leave blank]
-Legal case for first time renewal: [N/A if standard ESW paper with no toxic clause; otherwise leave blank for manual]
-Opps that may be co-termed upon customer agreement: [list from SF or write "None"]
+NNR Requested: [Return N/A if NNR is not required. Otherwise leave blank.]
+NNR Sending task created: [Return N/A if NNR is not required. Otherwise leave blank.]
+Legal case: [Return N/A if standard ESW paper with no toxic clause. Otherwise leave blank for manual review.]
 
 NOTE (add this block only if there are ARR/TCV mismatches between contract, SF, and NS):
 Current ARR mismatch with SQ. [describe mismatch]. Recommend raising to Stuck Opps tracker.
@@ -179,22 +178,18 @@ b) TCV
 
 c) End date
 - CONTRACT: [value]
-- SF End Date: [value or UNVERIFIED]
+- SF End Date: [Derive from Salesforce Renewal Date (CloseDate) minus 1 day. 
+Example: if Renewal Date = 15-Sep-2026, SF End Date = 14-Sep-2026. 
+If Renewal Date is not available, return UNVERIFIED.]
 - NS End Date: [value or UNVERIFIED]
 - If any value is missing, output UNVERIFIED — End Date.
 - Only output MISMATCH if all values are present and clearly conflict.
 
-d) Product / Subscription Plan
-- CONTRACT: [value]
-- NS Subscription Plan: [value or UNVERIFIED]
-- If NS value is missing, output UNVERIFIED — Product.
-- Only output MISMATCH if both values are present and clearly conflict.
-
-e) Customer name
+d) Customer name
 - CONTRACT: [customer name from document]
 - SF Account: [Account from Salesforce notes]
 - NS Customer Name: [value from "NS Customer Name" in NetSuite notes]
-- [If the contract or notes explicitly state that one entity is an affiliate or parent of the other, output MATCH. Otherwise output MISMATCH.]
+- [If the entity names clearly represent a known parent and affiliate (e.g., same brand with different legal suffix such as Inc., LLC, Ltd.), treat as MATCH unless there is clear evidence they are unrelated. Only output MISMATCH when the entities are clearly different companies.]
 
 Use UNVERIFIED — [field] if the SF or NS value was not provided in the notes (do not guess).
 
@@ -203,7 +198,7 @@ Use UNVERIFIED — [field] if the SF or NS value was not provided in the notes (
 First line must be EXACTLY one of these four final outcome labels based on your findings:
 
 OPP PREP COMPLETE: Ready for Engagement
-→ Use ONLY if all 5 DATA ALIGNMENT fields are MATCH and no blocking issues exist.
+→ Use ONLY if all DATA ALIGNMENT fields are MATCH
 
 MISMATCH FOUND — Correct data before proceeding
 → Use if any DATA ALIGNMENT field shows MISMATCH.
