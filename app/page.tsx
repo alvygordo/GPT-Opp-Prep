@@ -237,20 +237,8 @@ export default function Home() {
     const nsBlock = `
 --- NetSuite Data ---
 NS Customer Name: ${((c.companyName ?? c.entityid ?? c.name ?? nsSearch) || '') as string}
-NS Customer Status: ${(c.status ?? c.entityStatus ?? '') as string}
+NS Customer Status: ${String(c.status ?? c.entityStatus ?? '')}
 NS Subscription Status: ${nsSubscriptionStatus}
-NS Subscription Plan: ${data.subscription_plan ?? ''}
-NS Subsidiary: ${data.subsidiary ?? ''}
-NS ARR: ${data.arr != null ? `$${data.arr}` : ''}
-NS Start Date: ${data.start_date ?? ''}
-NS End Date: ${data.end_date ?? ''}
-NS Reseller: ${data.reseller ?? 'None'}
-NS End User: ${data.end_user ?? ''}
-NS Billing Address: ${(c.billingAddress ?? c.defaultaddress ?? c.address ?? '') as string}
-NS Last Invoice ID: ${invoiceId || ''}
-NS Last Invoice Date: ${invoiceDate || ''}
-NS Last Invoice Amount: ${invoiceAmount ? `$${invoiceAmount}` : ''}
-NS Total Invoices Found: ${inv?.total ?? 0}
 NS Overdue Balance: ${overdueDisplay}
 ---`
 
@@ -272,25 +260,16 @@ NS Overdue Balance: ${overdueDisplay}
       : 'None'
 
     const r = opp as any
-    setNotes(`--- Salesforce Opportunity Data ---
-Opportunity Name: ${opp.Name}
-Account: ${opp['Account.Name']}
-Stage: ${opp.StageName}
-Renewal Date: ${opp.CloseDate ?? ''}
-Owner: ${opp['Owner.Name']}
-Opportunity ID: ${opp.Id}
-Current Term: ${r.Current_Term__c ?? ''}
-Current ARR: ${r.ARR__c ?? ''}
-Current TCV: ${r.TCV__c ?? ''}
-Parent Opportunity: ${parentOppDisplay}
-Auto-Renewed Last Term: ${r.Auto_Renewed_Last_Term__c ?? ''}
-Contract on ESW 2019+ Terms?: ${r.Contract_on_ESW_2019_Terms__c ?? ''}
-Has Auto-Renewal Clause: ${r.Has_Auto_Renewal_Clause__c ?? ''}
-Contract has Toxic Clauses?: ${r.Contract_has_Toxic_Clauses__c ?? ''}
-Customer Termination Notice Period: ${r.Customer_Termination_Notice_Period__c ?? ''}
-Customer Termination Deadline: ${r.Customer_Termination_Deadline__c ?? ''}
-NNR Required?: ${r.NNR_Required__c ?? ''}
----`)
+    setNotes(`
+--- Salesforce Opportunity Data ---
+Opportunity Name: ${r.Name ?? ''}
+Account: ${r.Account?.Name ?? ''}
+Stage: ${r.StageName ?? ''}
+Renewal Date: ${r.CloseDate ?? ''}
+Owner: ${r.Owner?.Name ?? ''}
+
+---
+`)
     // Auto-search NetSuite with the account name
     searchNetsuite(accountName)
   }
